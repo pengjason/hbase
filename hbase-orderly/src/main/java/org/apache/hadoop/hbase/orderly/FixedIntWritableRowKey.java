@@ -26,8 +26,8 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IntWritable;
 
-/** Serializes and deserializes IntWritablesWritables into a sortable 
- * fixed-length byte array representation.
+/** Serializes and deserializes IntWritables into a sortable fixed-length
+ * byte array representation.
  *
  * <p>This format ensures that all integers sort in their natural order, as
  * they would sort when using signed integer comparison.</p>

@@ -29,7 +29,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
 /** Serializes and deserializes BigDecimal objects into a sortable 
- * byte aray representation.
+ * byte array representation.
  *
  * <p>This format ensures that serialized byte values sort in the natural
  * order of a {@link BigDecimal} (as ordered by {@link BigDecimal#compareTo}. 
@@ -43,7 +43,7 @@ import org.apache.hadoop.io.Writable;
  * the scale is a signed 32-bit int.
  * 
  * <p>This encoding format converts a canonicalized BigDecimal into an a
- * power-of-10 adjustec exponent, and an unscaled arbitrary precision base-10 
+ * power-of-10 adjusted exponent, and an unscaled arbitrary precision base-10
  * integer significand. As described in {@link BigDecimal#toString}, an 
  * adjusted exponent is equal to the <code>scale + precision - 1</code>, where 
  * precision is the number of digits in the unscaled base 10 significand 
@@ -105,11 +105,11 @@ import org.apache.hadoop.io.Writable;
  * in memory to fit into a 32-bit integer.</p>
  * 
  * <p>To use the more efficient serialization format employed by 
- * <code>IntWritable</code> while avoiding 32-bit truncation, This class 
- * subclasses <code>IntWritableRowKey</code> to use <code>LongWritable</code> 
- * rather than <code>IntWritable</code> objects for storing values in memory. 
- * The byte serialization format remains unchanged (and is slightly more 
- * efficient for 33-bit objects than the format employed by 
+ * <code>IntWritable</code> while avoiding 32-bit truncation, the
+ * <code>ExponentRowKey</code> class subclasses <code>IntWritableRowKey</code>
+ * to use <code>LongWritable</code> rather than <code>IntWritable</code> objects
+ * for storing values in memory. The byte serialization format remains unchanged
+ * (and is slightly more efficient for 33-bit objects than the format employed by
  * {@link LongWritableRowKey}).</p>
  *
  * <h1> Header </h1>
@@ -142,7 +142,7 @@ import org.apache.hadoop.io.Writable;
  * specified above. We also omit the trailing terminator byte in our BCD
  * representation (which is only required for even-length BCD serializations
  * anyway). Implicit termination is discussed further in 
- * {@link orderly.RowKey}.
+ * {@link RowKey}.
  *
  * <h1> Usage </h1>
  * This is the second fastest class for storing <code>BigDecimal</code> objects.
@@ -385,7 +385,7 @@ public class BigDecimalRowKey extends RowKey
     return new BigDecimal(i, -scale);
   }
 
-  protected class ExponentRowKey extends IntWritableRowKey {
+  private class ExponentRowKey extends IntWritableRowKey {
     /* The maximum value that can be stored by IntWritableRowKey's serialization
      * format (excluding the sign bit) is a 35-bit value, which is enough to 
      * store the 33-bit adjusted exponent + two reserved bits. We override the 

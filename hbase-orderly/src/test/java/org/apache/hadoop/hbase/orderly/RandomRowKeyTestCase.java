@@ -34,8 +34,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public abstract class RandomRowKeyTestCase extends RowKeyTestCase
-{
+public abstract class RandomRowKeyTestCase extends RowKeyTestCase {
   protected Random r;
   protected int numTests, maxRedZone;
 
@@ -45,8 +44,7 @@ public abstract class RandomRowKeyTestCase extends RowKeyTestCase
     if (r == null)
       r = new Random(Long.valueOf(System.getProperty("test.random.seed", "0")));
     numTests = Integer.valueOf(System.getProperty("test.random.count", "8192"));
-    maxRedZone = Integer.valueOf(System.getProperty("test.random.maxredzone", 
-          "16"));
+    maxRedZone = Integer.valueOf(System.getProperty("test.random.maxredzone", "16"));
     super.setUp();
   }
 
@@ -72,8 +70,7 @@ public abstract class RandomRowKeyTestCase extends RowKeyTestCase
   }
 
   @Override
-  public void serialize(Object o, ImmutableBytesWritable w) throws IOException
-  {
+  public void serialize(Object o, ImmutableBytesWritable w) throws IOException {
     byte[] b;
     int len;
 
@@ -105,8 +102,7 @@ public abstract class RandomRowKeyTestCase extends RowKeyTestCase
   }
 
   @Override
-  public Object deserialize(ImmutableBytesWritable w) throws IOException 
-  {
+  public Object deserialize(ImmutableBytesWritable w) throws IOException {
     Object o;
 
     switch(r.nextInt(3)) {
@@ -131,25 +127,20 @@ public abstract class RandomRowKeyTestCase extends RowKeyTestCase
   }
 
   @Override
-  public void testSerialization(Object o, ImmutableBytesWritable w) 
-    throws IOException 
-  {
+  public void testSerialization(Object o, ImmutableBytesWritable w) throws IOException {
     super.testSerialization(o, w);
     ((RedZoneImmutableBytesWritable)w).verify();
   }
 
   @Override
-  public void testSkip(Object o, ImmutableBytesWritable w) 
-    throws IOException
-  {
+  public void testSkip(Object o, ImmutableBytesWritable w) throws IOException {
     super.testSkip(o, w);
     ((RedZoneImmutableBytesWritable)w).verify();
   }
 
   @Override
   public void testSort(Object o1, ImmutableBytesWritable w1, Object o2, 
-      ImmutableBytesWritable w2) throws IOException
-  {
+      ImmutableBytesWritable w2) throws IOException {
     RedZoneImmutableBytesWritable r1 = (RedZoneImmutableBytesWritable) w1,
                                   r2 = (RedZoneImmutableBytesWritable) w2;
     int r1Length = r1.getLength(),
@@ -169,8 +160,9 @@ public abstract class RandomRowKeyTestCase extends RowKeyTestCase
   @Override
   public void testRowKey() throws IOException {
     for (int i = 0; i < numTests; i++) {
-      setRowKey(createRowKey().setOrder(r.nextBoolean() ? Order.ASCENDING :
-            Order.DESCENDING).setTermination(r.nextBoolean() ? Termination.MUST : Termination.AUTO));
+      Order o = r.nextBoolean() ? Order.ASCENDING : Order.DESCENDING;
+      Termination t = r.nextBoolean() ? Termination.MUST : Termination.AUTO;
+      setRowKey(createRowKey().setOrder(o).setTermination(t));
       super.testRowKey();
       if (i != numTests - 1) {
         tearDown();
@@ -179,9 +171,7 @@ public abstract class RandomRowKeyTestCase extends RowKeyTestCase
     }
   }
 
-  protected class RedZoneImmutableBytesWritable 
-    extends ImmutableBytesWritable
-  {
+  protected class RedZoneImmutableBytesWritable extends ImmutableBytesWritable {
     byte[] header, trailer;
     int buflen;
 
@@ -200,8 +190,7 @@ public abstract class RandomRowKeyTestCase extends RowKeyTestCase
       randomize(b, 0, b.length);
     }
 
-    public RedZoneImmutableBytesWritable reset(int len, boolean includeTrailer)
-    {
+    public RedZoneImmutableBytesWritable reset(int len, boolean includeTrailer) {
       this.buflen = len;
       if (maxRedZone > 0) {
         header = new byte[r.nextInt(maxRedZone)];
@@ -226,9 +215,7 @@ public abstract class RandomRowKeyTestCase extends RowKeyTestCase
 
     public int getBufferLength() { return buflen; }
 
-    private void verifyEquals(byte[] a, int aOffset, byte[] b, 
-        int bOffset, int len) 
-    {
+    private void verifyEquals(byte[] a, int aOffset, byte[] b, int bOffset, int len) {
       for (int i = 0; i < len; i++)
         assertEquals("Header/Trailer corruption", a[aOffset + i], 
             b[bOffset + i]);

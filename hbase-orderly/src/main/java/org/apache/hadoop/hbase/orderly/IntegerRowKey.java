@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.IntWritable;
 
 /** Serializes and deserializes Integer objects into a variable-length
- * sortable byte aray representation.
+ * sortable byte array representation.
  *
  * <p>The serialization and deserialization method are
  * identical to {@link IntWritableRowKey} after converting the IntWritable 

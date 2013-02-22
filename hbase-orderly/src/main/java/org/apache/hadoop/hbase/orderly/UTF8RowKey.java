@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
  * &lt; b &lt; ba &lt; bb &lt; ... &lt; Character.MAX_CODE_POINT &lt; ...</p>
  *
  * <h1>Serialization Format</h1>
- * <p>The UTF-8 format already gurantees that sorting byte arrays of UTF-8 
+ * <p>The UTF-8 format already guarantees that sorting byte arrays of UTF-8 
  * encoded characters is equivalent to sorting the equivalent decoded Unicode 
  * strings by Unicode code point. This is discussed further in the 
  * <a href="http://en.wikipedia.org/wiki/UTF-8"> UTF-8 Wikipedia article</a>.

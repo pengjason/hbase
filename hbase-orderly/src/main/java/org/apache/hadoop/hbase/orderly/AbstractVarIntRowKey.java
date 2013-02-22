@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
-/** Serializes and deserializes various integer types a sortable, 
+/** Serializes and deserializes various integer types into a sortable,
  * variable-length  byte array.
  *
  * <p>Integers, signed or unsigned, are sorted in their natural order. 
@@ -46,7 +46,7 @@ import org.apache.hadoop.io.Writable;
  * encoding uses a header byte followed by 0-8 data bytes. Each data byte is
  * a byte from the serialized integer (in big endian order). The header byte 
  * format consists of implicit or explicit sign bit, a type field (or fields)
- * ndicating the length of the serialized integer in bytes, and the most 
+ * indicating the length of the serialized integer in bytes, and the most
  * significant bits of the serialized integer data.</p>
  * 
  * <p>Operations for setting/getting the header sign bit and type fields, as 
@@ -65,7 +65,7 @@ import org.apache.hadoop.io.Writable;
  * remaining 8-R bits store the header information. Subclasses specify the 
  * maximum number of reserved bits allowed, and typical maximums are 2-3 bits.
  * 
- * <p>Reserved bits are often used to efficently embed variable-length integers 
+ * <p>Reserved bits are often used to efficiently embed variable-length integers
  * within more complex serialized data structures while preserving sort 
  * ordering. For example, the {@link BigDecimalRowKey} class uses two reserved
  * bits to efficiently embed a variable-length integer exponent within a 
@@ -166,7 +166,7 @@ public abstract class AbstractVarIntRowKey extends RowKey
   }
 
   /** Sets the reserved value used in the header byte. Values are restricted 
-   * to the number of bits specified in @{link setReservedBits}. Any value
+   * to the number of bits specified in {@link #setReservedBits}. Any value
    * outside of this range will be automatically truncated to the number of 
    * permitted reserved bits. The value itself is stored in the most 
    * significant bits of the header byte during serialization.

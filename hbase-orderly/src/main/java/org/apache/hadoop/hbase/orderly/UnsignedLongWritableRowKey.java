@@ -38,7 +38,7 @@ import org.apache.hadoop.io.Writable;
  * The JavaDoc page for the parent class describes the high-level design of the
  * general serialization format. The basic idea is to only encode only those 
  * bits that have values differing from the implicit zero-valued sign bit
- * (all unsigned integers effectictively have an implied sign bit of zero).
+ * (all unsigned integers effectively have an implied sign bit of zero).
  * 
  * <p>Our encoding consists of a header byte followed by 0-8 data bytes. The 
  * data bytes are packed 8-bit data values in big-endian order. The header byte

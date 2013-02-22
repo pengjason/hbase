@@ -28,8 +28,9 @@ import org.apache.hadoop.io.BytesWritable;
 /**
  * Serialize and deserialize byte arrays into a fixed-length byte array.
  * <p/>
- * The serialization and deserialization methods are identical to {@link FixedBytesWritableRowKey} after converting the
- * BytesWritable to/from a byte[].
+ * The serialization and deserialization methods are identical to
+ * {@link FixedBytesWritableRowKey} after converting the BytesWritable
+ * to/from a byte[].
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

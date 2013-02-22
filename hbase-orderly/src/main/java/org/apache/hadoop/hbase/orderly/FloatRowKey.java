@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.FloatWritable;
 
-/** Serializes and deserializes Floats into a sortable byte aray 
+/** Serializes and deserializes Floats into a sortable byte array 
  * representation.
  * 
  * <p>The serialization and deserialization method are identical to 

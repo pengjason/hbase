@@ -25,32 +25,32 @@ import org.apache.hadoop.io.BytesWritable;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestVariableLengthBytesWritableWithFixedLengthPrefixRowKey extends RandomRowKeyTestCase {
+public class TestVariableLengthBytesWritableWithFixedLengthPrefixRowKey
+  extends RandomRowKeyTestCase {
 
-    @Override
-    public RowKey createRowKey() {
-        return new VariableLengthBytesWritableRowKey(r.nextInt(10));
-    }
+  @Override
+  public RowKey createRowKey() {
+    return new VariableLengthBytesWritableRowKey(r.nextInt(10));
+  }
 
-    @Override
-    public Object createObject() {
-        final int length = r.nextInt(1000) + 10;
-        final byte[] randomBytes = new byte[length];
-        r.nextBytes(randomBytes);
-        return new BytesWritable(randomBytes);
-    }
+  @Override
+  public Object createObject() {
+    final int length = r.nextInt(1000) + 10;
+    final byte[] randomBytes = new byte[length];
+    r.nextBytes(randomBytes);
+    return new BytesWritable(randomBytes);
+  }
 
-    @Override
-    public int compareTo(Object o1, Object o2) {
-        if (o1 == null || o2 == null)
-            return (o1 != null ? 1 : 0) - (o2 != null ? 1 : 0);
+  @Override
+  public int compareTo(Object o1, Object o2) {
+    if (o1 == null || o2 == null)
+      return (o1 != null ? 1 : 0) - (o2 != null ? 1 : 0);
 
-        BytesWritable b1 = ((BytesWritable) o1);
-        BytesWritable b2 = ((BytesWritable) o2);
+    BytesWritable b1 = ((BytesWritable) o1);
+    BytesWritable b2 = ((BytesWritable) o2);
 
-        final int compareTo = b1.compareTo(b2);
+    final int compareTo = b1.compareTo(b2);
 
-        return compareTo < 0 ? -1 : compareTo > 0 ? 1 : 0;
-    }
-
+    return compareTo < 0 ? -1 : compareTo > 0 ? 1 : 0;
+  }
 }

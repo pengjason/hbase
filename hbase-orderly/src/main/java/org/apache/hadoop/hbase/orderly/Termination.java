@@ -30,13 +30,13 @@ import org.apache.hadoop.classification.InterfaceStability;
  * terminated formats, regardless of what the <code>termination</code> flag
  * is set to.</p>
  *
- * <p>There are three possible values for the <code>mustTerminate</code> flag: AUTO, MUST or SHOULD_NOT. AUTO will only
- * use termination if really necessary, MUST always writes termination bytes and SHOULD_NOT never writes them. Using
- * SHOULD_NOT implies you have to know what you are doing! This can result in ambiguous rowkeys.</p>
+ * <p>There are three possible values for the <code>mustTerminate</code> flag:
+ * AUTO, MUST or SHOULD_NOT. AUTO will only use termination if really
+ * necessary, MUST always writes termination bytes and SHOULD_NOT never writes
+ * them. Using SHOULD_NOT implies you have to know what you are doing! This can
+ * result in ambiguous rowkeys.</p>
  *
  * <p>Note that SHOULD_NOT is stronger than MUST.</p>
- *
- * @author Jan Van Besien
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

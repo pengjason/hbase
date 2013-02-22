@@ -27,10 +27,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.BytesWritable;
 
 /**
- * Serializes and deserializes BytesWritable into a fixed length sortable representation.
+ * Serializes and deserializes BytesWritable into a fixed length sortable
+ * representation.
  * <p/>
- * TODO: this doesn't support NULL values (because they can not be distinguished from empty arrays). Should I
- * explicitely check for this?
+ * TODO: this doesn't support NULL values (because they can not be distinguished
+ * from empty arrays). Should I explicitly check for this?
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

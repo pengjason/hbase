@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.FloatWritable;
 
-/** Serializes and deserializes FloatWritables into a sortable byte aray 
+/** Serializes and deserializes FloatWritables into a sortable byte array 
  * representation.
  *
  * <p>This format ensures the following total ordering of floating point values:

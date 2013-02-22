@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.hbase.orderly;
 
-
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 
-public class StringExample
-{
-  /* Simple examples showing serialization lengths with Text key */
+/**
+ * Examples of using the String-like RowKey types.
+ */
+public class StringExample {
+
+  /**
+   * Simple examples showing serialization lengths with TextRowKey.
+   */
   public void lengthExamples() throws Exception {
     TextRowKey i = new TextRowKey();
 
@@ -46,7 +50,9 @@ public class StringExample
         i.serialize(new Text("")).length);
   }
 
-  /* Simple examples showing serialization tests with StringRowKey */
+  /**
+   * Simple examples showing serialization tests with StringRowKey.
+   */
   public void serializationExamples() throws Exception {
     StringRowKey l = new StringRowKey(); 
     ImmutableBytesWritable buffer = new ImmutableBytesWritable();
@@ -70,6 +76,9 @@ public class StringExample
         l.deserialize(l.serialize(null)));
   }
 
+  /**
+   * Demonstrates serialization where termination is necessary.
+   */
   public void mustTerminateExamples() throws Exception {
     UTF8RowKey u = new UTF8RowKey();
 

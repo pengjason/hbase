@@ -22,8 +22,11 @@ import java.math.BigDecimal;
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 
-public class StructExample
-{
+/**
+ * Examples of using the {@link StructRowKey} and related utilities for
+ * serialization of compound types.
+ */
+public class StructExample {
   BigDecimalRowKey bd;
   DoubleRowKey d;
   FixedUnsignedLongRowKey ul;
@@ -38,6 +41,30 @@ public class StructExample
     i = new IntegerRowKey();
   }
 
+  void printStruct(Object obj, String prefix) {
+    Object[] o = (Object[]) obj;
+    if (o == null) {
+      System.out.println(prefix + "Struct: NULL");
+      return;
+    }
+
+    System.out.println(prefix + "Struct: ");
+    int pos = 0;
+    for (Object field : o) {
+      if (field instanceof Object[]) {
+        System.out.println(prefix + " Field " + pos++ + " nested: ");
+        printStruct(field, prefix + "\t");
+      } else {
+        System.out.println(prefix + "  Field " + pos++ + " = " + field);
+      }
+    }
+  }
+
+  void printStruct(Object obj) { printStruct(obj, ""); }
+
+  /**
+   * Simple examples showing serialization lengths with StructRowKey.
+   */
   public void structLengthExample() throws Exception {
     StructRowKey fin = new StructRowKey(new RowKey[] { i, bd, s });
     System.out.println("struct(null) length - " + 
@@ -71,27 +98,10 @@ public class StructExample
     fin.setOrder(Order.ASCENDING);
   }
 
-  void printStruct(Object obj, String prefix) {
-    Object[] o = (Object[]) obj;
-    if (o == null) {
-      System.out.println(prefix + "Struct: NULL");
-      return;
-    }
-
-    System.out.println(prefix + "Struct: ");
-    int pos = 0;
-    for (Object field : o) {
-      if (field instanceof Object[]) {
-        System.out.println(prefix + " Field " + pos++ + " nested: ");
-        printStruct(field, prefix + "\t");
-      } else {
-        System.out.println(prefix + "  Field " + pos++ + " = " + field);
-      }
-    }
-  }
-
-  void printStruct(Object obj) { printStruct(obj, ""); }
-
+  /**
+   * Simple examples showing serialization of StructRowKey and (un)marshaling
+   * to and from byte[] and ImmutableBytesWritable.
+   */
   public void structSerializationExample() throws Exception {
     StructRowKey r = new StructRowKey(new RowKey[] { s, bd });
 
@@ -111,13 +121,14 @@ public class StructExample
     printStruct(r.deserialize(buffer));
   }
 
+  /**
+   * Simple example of using a prefix match. Store a row using (string, double,
+   * bigdecimal), but retrieve it using (string, double) and just (string).
+   */
   public void prefixExample() throws Exception {
-    /* Store a row using (string, double, bigdecimal), but retrieve it using
-     * (string, double) and just (string)
-     */
     StructRowKey rk = new StructRowKey(new RowKey[] { s, d, bd }),
-                 prefix1 = new StructRowKey(new RowKey[] { s, d}),
-                 prefix2 = new StructRowKey(new RowKey[] { s });
+            prefix1 = new StructRowKey(new RowKey[] { s, d}),
+            prefix2 = new StructRowKey(new RowKey[] { s });
 
     byte[] b = rk.serialize(new Object[] { "hello", 3.14159, 
         new BigDecimal("0.93e-102") });
@@ -135,6 +146,10 @@ public class StructExample
     printStruct(rk.deserialize(b));
   }
 
+  /**
+   * Examples of using the {@link StructBuilder} and {@link StructIterator}
+   * utilities.
+   */
   public void builderAndIteratorExample() throws Exception {
     StructRowKey rk = new StructBuilder().add(s).add(d).add(ul).toRowKey();
     Object[] o = new Object[] { "hello", 3.14159, 17L };
@@ -154,6 +169,9 @@ public class StructExample
       System.out.println(field);
   }
 
+  /**
+   * An example of nesting struct within a struct.
+   */
   public void nestedStructExample() throws Exception {
     StructBuilder b = new StructBuilder();
     StructRowKey n = b.add(ul).add(bd).toRowKey(),
