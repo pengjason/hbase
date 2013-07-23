@@ -840,6 +840,14 @@ public class OrderedBytes {
 
   /**
    * Encode a BLOB value using a modified varint encoding scheme.
+   * @see #encodeBlobVar(ByteBuffer, byte[], int, int, Order)
+   */
+  public static void encodeBlobVar(ByteBuffer buff, byte[] val, Order ord) {
+    encodeBlobVar(buff, val, 0, null != val ? val.length : 0, ord);
+  }
+
+  /**
+   * Encode a BLOB value using a modified varint encoding scheme.
    * <p>
    * This format encodes a byte[] value such that no limitations on the input
    * value are imposed. The first byte encodes the encoding scheme that
@@ -851,20 +859,20 @@ public class OrderedBytes {
    * on each encoded byte carry the value payload.
    * </p>
    */
-  public static void encodeBlobVar(ByteBuffer buff, byte[] val, Order ord) {
+  public static void encodeBlobVar(ByteBuffer buff, byte[] val, int offset, int len, Order ord) {
     if (null == val) {
       encodeNull(buff, ord);
       return;
     }
     // Empty value is null-terminated. All other values are encoded as 7-bits per byte.
-    assert buff.remaining() >= blobVarEncodedLength(val.length) : "buffer overflow expected.";
+    assert buff.remaining() >= blobVarEncodedLength(len) : "buffer overflow expected.";
     int start = buff.position();
     buff.put(BLOB_VAR);
-    if (0 == val.length) {
+    if (0 == len) {
       buff.put(TERM);
     } else {
       byte s = 1, t = 0;
-      for (int i = 0; i < val.length; i++) {
+      for (int i = offset; i < len; i++) {
         buff.put((byte) (0x80 | t | ((val[i] & 0xff) >>> s)));
         if (s < 7) {
           t = (byte) (val[i] << (7 - s));

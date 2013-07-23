@@ -53,7 +53,7 @@ public class Numeric extends Number {
   private transient int hashCode = 0;
 
   /**
-   * Create an <code>HNumeric</code> instance over a <code>double</code>.
+   * Create an <code>Numeric</code> instance over a <code>double</code>.
    */
   public Numeric(double val) {
     isR = true;
@@ -64,7 +64,7 @@ public class Numeric extends Number {
   }
 
   /**
-   * Create an <code>HNumeric</code> instance over a <code>long</code>.
+   * Create an <code>Numeric</code> instance over a <code>long</code>.
    */
   public Numeric(long val) {
     isZ = true;
@@ -75,7 +75,7 @@ public class Numeric extends Number {
   }
 
   /**
-   * Create an <code>HNumeric</code> instance over a <code>BigDecimal</code> .
+   * Create an <code>Numeric</code> instance over a <code>BigDecimal</code> .
    */
   public Numeric(BigDecimal val) {
     if (null == val) throw new NullPointerException();

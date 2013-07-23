@@ -595,11 +595,11 @@ public class TestOrderedBytes {
   }
 
   /**
-   * Test length estimation algorithms for Blob-mid encoding. Does not cover
+   * Test length estimation algorithms for BlobVar encoding. Does not cover
    * 0-length input case properly.
    */
   @Test
-  public void testblobMidLencodedLength() {
+  public void testBlobVarLencodedLength() {
     int[][] values = {
         /* decoded length, encoded length
          * ceil((n bytes * 8 bits/input byte) / 7 bits/encoded byte) + 1 header
@@ -615,10 +615,10 @@ public class TestOrderedBytes {
   }
 
   /**
-   * Test Blob-mid encoding.
+   * Test BlobVar encoding.
    */
   @Test
-  public void testBlobMid() {
+  public void testBlobVar() {
     byte[][] vals =
         { "".getBytes(), "foo".getBytes(), "foobarbazbub".getBytes(),
           { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
@@ -675,10 +675,10 @@ public class TestOrderedBytes {
   }
 
   /**
-   * Test Blob-last encoding.
+   * Test BlobCopy encoding.
    */
   @Test
-  public void testBlobLast() {
+  public void testBlobCopy() {
     byte[][] vals =
       { "".getBytes(), "foo".getBytes(), "foobarbazbub".getBytes(),
         { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
@@ -742,10 +742,10 @@ public class TestOrderedBytes {
   }
 
   /**
-   * Assert invalid input byte[] are rejected by Blob-last
+   * Assert invalid input byte[] are rejected by BlobCopy
    */
   @Test(expected = IllegalArgumentException.class)
-  public void testBlobLastNoZeroBytes() {
+  public void testBlobCopyNoZeroBytes() {
     byte[] val = { 0x01, 0x02, 0x00, 0x03 };
     ByteBuffer buf = ByteBuffer.allocate(val.length + 2);
     OrderedBytes.encodeBlobCopy(buf, val, Order.ASCENDING);
@@ -773,8 +773,8 @@ public class TestOrderedBytes {
     float float32 = 100.0f;
     double float64 = 100.0d;
     String text = "hello world.";
-    byte[] blobMid = Bytes.toBytes("foo");
-    byte[] blobLast = Bytes.toBytes("bar");
+    byte[] blobVar = Bytes.toBytes("foo");
+    byte[] blobCopy = Bytes.toBytes("bar");
 
     ByteBuffer buff = ByteBuffer.allocate(30);
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
@@ -875,13 +875,13 @@ public class TestOrderedBytes {
       assertEquals(buff.position(), buff.limit());
 
       buff.clear();
-      OrderedBytes.encodeBlobVar(buff, blobMid, ord);
+      OrderedBytes.encodeBlobVar(buff, blobVar, ord);
       buff.flip();
       OrderedBytes.skip(buff);
       assertEquals(buff.position(), buff.limit());
 
       buff.clear();
-      OrderedBytes.encodeBlobCopy(buff, blobLast, ord);
+      OrderedBytes.encodeBlobCopy(buff, blobCopy, ord);
       buff.flip();
       OrderedBytes.skip(buff);
       assertEquals(buff.position(), buff.limit());
