@@ -25,6 +25,7 @@ import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.SequenceInputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -39,6 +40,10 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
+import org.apache.hadoop.hbase.types.LegacyBytes;
+import org.apache.hadoop.hbase.types.LegacyBytesTerminated;
+import org.apache.hadoop.hbase.types.Struct;
+import org.apache.hadoop.hbase.types.StructBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
@@ -82,19 +87,19 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   public static final byte VERSION = 1;
   private static final Log LOG = LogFactory.getLog(HRegionInfo.class);
 
-  /**
+  /*
    * The new format for a region name contains its encodedName at the end.
    * The encoded name also serves as the directory name for the region
    * in the filesystem.
    *
    * New region name format:
-   *    &lt;tablename>,,&lt;startkey>,&lt;regionIdTimestamp>.&lt;encodedName>.
+   *    <tablename>,,<startkey>,<regionIdTimestamp>.<encodedName>.
    * where,
-   *    &lt;encodedName> is a hex version of the MD5 hash of
-   *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
+   *    <encodedName> is a hex version of the MD5 hash of
+   *    <tablename>,<startkey>,<regionIdTimestamp>
    *
    * The old region name format:
-   *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
+   *    <tablename>,<startkey>,<regionIdTimestamp>
    * For region names in the old format, the encoded name is a 32-bit
    * JenkinsHash integer value (in its decimal notation, string form).
    *<p>
@@ -113,6 +118,24 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   /** A non-capture group so that this can be embedded. */
   public static final String ENCODED_REGION_NAME_REGEX = "(?:[a-f0-9]+)";
+
+  /** An <code>HDataType</code> for serializing the new format. */
+  protected static final Struct HREGIONINFO_NEW_CODEC =
+      // this differs from the ",," described above
+      new StructBuilder()
+        .add(new LegacyBytesTerminated(","))
+        .add(new LegacyBytesTerminated(","))
+        .add(new LegacyBytesTerminated(new byte[] { ENC_SEPARATOR }))
+        .add(new LegacyBytesTerminated(new byte[] { ENC_SEPARATOR }))
+        .toStruct();
+
+  /** An <code>HDataType</code> for serializing the old format. */
+  protected static final Struct HREGIONINFO_OLD_CODEC =
+      new StructBuilder()
+        .add(new LegacyBytesTerminated(","))
+        .add(new LegacyBytesTerminated(","))
+        .add(new LegacyBytes())
+        .toStruct();
 
   /**
    * Does region name contain its encoded name?
@@ -139,9 +162,8 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     if (hasEncodedName(regionName)) {
       // region is in new format:
       // <tableName>,<startKey>,<regionIdTimeStamp>/encodedName/
-      encodedName = Bytes.toString(regionName,
-          regionName.length - MD5_HEX_LENGTH - 1,
-          MD5_HEX_LENGTH);
+      ByteBuffer buff = ByteBuffer.wrap(regionName);
+      encodedName = (String) HREGIONINFO_NEW_CODEC.read(buff, 3);
     } else {
       // old format region name. First META region also
       // use this format.EncodedName is the JenkinsHash value.
@@ -219,7 +241,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * first meta regions
    */
   private HRegionInfo(long regionId, byte[] tableName) {
-    super();
     this.regionId = regionId;
     this.tableName = tableName.clone();
     // Note: First Meta regions names are still in old format
@@ -233,9 +254,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @deprecated Used by Writables and Writables are going away.
    */
   @Deprecated
-  public HRegionInfo() {
-    super();
-  }
+  public HRegionInfo() {}
 
   public HRegionInfo(final byte[] tableName) {
     this(tableName, null, null);
@@ -287,7 +306,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
                      final byte[] endKey, final boolean split, final long regionid)
   throws IllegalArgumentException {
 
-    super();
     if (tableName == null) {
       throw new IllegalArgumentException("tableName cannot be null");
     }
@@ -313,7 +331,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param other
    */
   public HRegionInfo(HRegionInfo other) {
-    super();
     this.endKey = other.getEndKey();
     this.offLine = other.isOffline();
     this.regionId = other.getRegionId();
@@ -367,20 +384,15 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    */
   public static byte [] createRegionName(final byte [] tableName,
       final byte [] startKey, final byte [] id, boolean newFormat) {
-    byte [] b = new byte [tableName.length + 2 + id.length +
+    ByteBuffer b = ByteBuffer.allocate(tableName.length + 2 + id.length +
        (startKey == null? 0: startKey.length) +
-       (newFormat ? (MD5_HEX_LENGTH + 2) : 0)];
+       (newFormat ? (MD5_HEX_LENGTH + 2) : 0));
 
-    int offset = tableName.length;
-    System.arraycopy(tableName, 0, b, 0, offset);
-    b[offset++] = HConstants.DELIMITER;
-    if (startKey != null && startKey.length > 0) {
-      System.arraycopy(startKey, 0, b, offset, startKey.length);
-      offset += startKey.length;
-    }
-    b[offset++] = HConstants.DELIMITER;
-    System.arraycopy(id, 0, b, offset, id.length);
-    offset += id.length;
+    Object[] fields = new Object[newFormat ? 4 : 3];
+    fields[0] = tableName;
+    fields[1] = null != startKey ? startKey : new byte[0];
+    fields[2] = id;
+    HREGIONINFO_OLD_CODEC.encode(b, newFormat ? Arrays.copyOf(fields, 3) : fields);
 
     if (newFormat) {
       //
@@ -390,7 +402,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       // to compute a MD5 hash to be used as the encoded name, and append
       // it to the byte buffer.
       //
-      String md5Hash = MD5Hash.getMD5AsHex(b, 0, offset);
+      String md5Hash = MD5Hash.getMD5AsHex(b.array(), 0, b.position());
       byte [] md5HashBytes = Bytes.toBytes(md5Hash);
 
       if (md5HashBytes.length != MD5_HEX_LENGTH) {
@@ -399,13 +411,12 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       }
 
       // now append the bytes '.<encodedName>.' to the end
-      b[offset++] = ENC_SEPARATOR;
-      System.arraycopy(md5HashBytes, 0, b, offset, MD5_HEX_LENGTH);
-      offset += MD5_HEX_LENGTH;
-      b[offset++] = ENC_SEPARATOR;
+      fields[3] = md5HashBytes;
+      b.clear();
+      HREGIONINFO_NEW_CODEC.encode(b, fields);
     }
 
-    return b;
+    return b.array();
   }
 
   /**
