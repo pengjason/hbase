@@ -43,34 +43,20 @@ public class HConnectionTestingUtility {
    * Get a Mocked {@link HConnection} that goes with the passed <code>conf</code>
    * configuration instance.  Minimally the mock will return
    * <code>conf</conf> when {@link HConnection#getConfiguration()} is invoked.
-   * Be sure to shutdown the connection when done by calling
-   * {@link HConnectionManager#deleteConnection(Configuration)} else it
-   * will stick around; this is probably not what you want.
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
    */
-  public static ClusterConnection getMockedConnection(final Configuration conf)
-  throws ZooKeeperConnectionException {
-    HConnectionKey connectionKey = new HConnectionKey(conf);
-    synchronized (ConnectionManager.CONNECTION_INSTANCES) {
-      HConnectionImplementation connection =
-          ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
-      if (connection == null) {
-        connection = Mockito.mock(HConnectionImplementation.class);
-        Mockito.when(connection.getConfiguration()).thenReturn(conf);
-        ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
-      }
-      return connection;
-    }
+  public static ClusterConnection getMockedConnection(final Configuration conf) {
+    ClusterConnection conn = Mockito.mock(HConnectionImplementation.class);
+    Mockito.when(conn.getConfiguration()).thenReturn(conf);
+    return conn;
   }
 
   /**
    * Calls {@link #getMockedConnection(Configuration)} and then mocks a few
    * more of the popular {@link HConnection} methods so they do 'normal'
    * operation (see return doc below for list). Be sure to shutdown the
-   * connection when done by calling
-   * {@link HConnectionManager#deleteConnection(Configuration)} else it
+   * connection when done by calling {@link HConnection#close()} else it
    * will stick around; this is probably not what you want.
    *
    * @param conf Configuration to use
@@ -88,9 +74,7 @@ public class HConnectionTestingUtility {
    * and that returns the passed {@link AdminProtos.AdminService.BlockingInterface} instance when
    * {@link HConnection#getAdmin(ServerName)} is called, returns the passed
    * {@link ClientProtos.ClientService.BlockingInterface} instance when
-   * {@link HConnection#getClient(ServerName)} is called (Be sure to call
-   * {@link HConnectionManager#deleteConnection(Configuration)}
-   * when done with this mocked Connection.
+   * {@link HConnection#getClient(ServerName)} is called.
    * @throws IOException
    */
   public static ClusterConnection getMockedConnectionAndDecorate(final Configuration conf,
@@ -98,7 +82,7 @@ public class HConnectionTestingUtility {
       final ClientProtos.ClientService.BlockingInterface client,
       final ServerName sn, final HRegionInfo hri)
   throws IOException {
-    ClusterConnection c = HConnectionTestingUtility.getMockedConnection(conf);
+    ClusterConnection c = getMockedConnection(conf);
     Mockito.doNothing().when(c).close();
     // Make it so we return a particular location when asked.
     final HRegionLocation loc = new HRegionLocation(hri, sn);
@@ -128,8 +112,8 @@ public class HConnectionTestingUtility {
    * Get a Mockito spied-upon {@link HConnection} that goes with the passed
    * <code>conf</code> configuration instance.
    * Be sure to shutdown the connection when done by calling
-   * {@link HConnectionManager#deleteConnection(Configuration)} else it
-   * will stick around; this is probably not what you want.
+   * {@link HConnection#close()} else it will stick around; this is probably
+   * not what you want.
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
@@ -138,24 +122,6 @@ public class HConnectionTestingUtility {
    */
   public static HConnection getSpiedConnection(final Configuration conf)
   throws IOException {
-    HConnectionKey connectionKey = new HConnectionKey(conf);
-    synchronized (ConnectionManager.CONNECTION_INSTANCES) {
-      HConnectionImplementation connection =
-          ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
-      if (connection == null) {
-        connection = Mockito.spy(new HConnectionImplementation(conf, true));
-        ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
-      }
-      return connection;
-    }
-  }
-
-  /**
-   * @return Count of extant connection instances
-   */
-  public static int getConnectionCount() {
-    synchronized (ConnectionManager.CONNECTION_INSTANCES) {
-      return ConnectionManager.CONNECTION_INSTANCES.size();
-    }
+    return Mockito.spy(new HConnectionImplementation(conf));
   }
 }

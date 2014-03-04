@@ -99,8 +99,7 @@ public class TestEndToEndSplitTransaction {
     byte []firstRow = Bytes.toBytes("aaa");
     byte []splitRow = Bytes.toBytes("lll");
     byte []lastRow = Bytes.toBytes("zzz");
-    HConnection con = HConnectionManager
-        .getConnection(TEST_UTIL.getConfiguration());
+    HConnection con = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
     // this will also cache the region
     byte[] regionName = con.locateRegion(tableName, splitRow).getRegionInfo()
         .getRegionName();
@@ -143,6 +142,8 @@ public class TestEndToEndSplitTransaction {
         regions.getSecond());
     assertTrue(test(con, tableName, firstRow, server));
     assertTrue(test(con, tableName, lastRow, server));
+
+    con.close();
   }
 
   /**

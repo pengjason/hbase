@@ -117,6 +117,7 @@ public class TestHBaseFsck {
   private final static int REGION_ONLINE_TIMEOUT = 800;
   private static RegionStates regionStates;
   private static ExecutorService executorService;
+  private static HConnection conn;
 
   // for the instance, reset every test run
   private HTable tbl;
@@ -139,6 +140,7 @@ public class TestHBaseFsck {
     AssignmentManager assignmentManager =
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
     regionStates = assignmentManager.getRegionStates();
+    conn = TEST_UTIL.getConnection();
   }
 
   @AfterClass
@@ -2134,8 +2136,7 @@ public class TestHBaseFsck {
 
   private void deleteMetaRegion(Configuration conf, boolean unassign, boolean hdfs,
       boolean regionInfoOnly) throws IOException, InterruptedException {
-    HConnection connection = HConnectionManager.getConnection(conf);
-    HRegionLocation metaLocation = connection.locateRegion(TableName.META_TABLE_NAME,
+    HRegionLocation metaLocation = conn.locateRegion(TableName.META_TABLE_NAME,
         HConstants.EMPTY_START_ROW);
     ServerName hsa = ServerName.valueOf(metaLocation.getHostnamePort(), 0L);
     HRegionInfo hri = metaLocation.getRegionInfo();

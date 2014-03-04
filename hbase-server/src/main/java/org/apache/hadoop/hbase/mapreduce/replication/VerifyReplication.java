@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.client.HConnectable;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -76,6 +77,8 @@ public class VerifyReplication {
 
     public static enum Counters {GOODROWS, BADROWS}
 
+    private HConnection replicatedConn;
+    private HTableInterface replicatedTable;
     private ResultScanner replicatedScanner;
 
     /**
@@ -104,19 +107,15 @@ public class VerifyReplication {
           }
         }
         scan.setTimeRange(startTime, endTime);
-        HConnectionManager.execute(new HConnectable<Void>(conf) {
-          @Override
-          public Void connect(HConnection conn) throws IOException {
-            String zkClusterKey = conf.get(NAME + ".peerQuorumAddress");
-            Configuration peerConf = HBaseConfiguration.create(conf);
-            ZKUtil.applyClusterKeyToConf(peerConf, zkClusterKey);
 
-            HTable replicatedTable = new HTable(peerConf, conf.get(NAME + ".tableName"));
-            scan.setStartRow(value.getRow());
-            replicatedScanner = replicatedTable.getScanner(scan);
-            return null;
-          }
-        });
+        String zkClusterKey = conf.get(NAME + ".peerQuorumAddress");
+        Configuration peerConf = HBaseConfiguration.create(conf);
+        ZKUtil.applyClusterKeyToConf(peerConf, zkClusterKey);
+
+        replicatedConn = HConnectionManager.createConnection(peerConf);
+        replicatedTable = replicatedConn.getTable(conf.get(NAME + ".tableName"));
+        scan.setStartRow(value.getRow());
+        replicatedScanner = replicatedTable.getScanner(scan);
       }
       Result res = replicatedScanner.next();
       try {
@@ -128,10 +127,18 @@ public class VerifyReplication {
       }
     }
 
-    protected void cleanup(Context context) {
+    protected void cleanup(Context context) throws IOException, InterruptedException {
       if (replicatedScanner != null) {
         replicatedScanner.close();
         replicatedScanner = null;
+      }
+      if (replicatedTable != null) {
+        replicatedTable.close();
+        replicatedTable = null;
+      }
+      if (replicatedConn != null) {
+        replicatedConn.close();
+        replicatedConn = null;
       }
     }
   }

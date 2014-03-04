@@ -53,8 +53,8 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
@@ -133,7 +133,6 @@ public class TestCatalogJanitor {
             ServerName.valueOf("example.org,12345,6789"),
           HRegionInfo.FIRST_META_REGIONINFO);
       // Set hbase.rootdir into test dir.
-      FileSystem fs = FileSystem.get(this.c);
       Path rootdir = FSUtils.getRootDir(this.c);
       FSUtils.setRootDir(this.c, rootdir);
       this.ct = Mockito.mock(CatalogTracker.class);
@@ -141,6 +140,9 @@ public class TestCatalogJanitor {
         Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
       Mockito.when(this.ct.getConnection()).thenReturn(this.connection);
       Mockito.when(ct.waitForMetaServerConnection(Mockito.anyLong())).thenReturn(hri);
+      // Mock a meta table that will accomidate delete() and close() calls.
+      HTable mockMeta = Mockito.mock(HTable.class);
+      Mockito.when(this.connection.getTable(TableName.META_TABLE_NAME)).thenReturn(mockMeta);
     }
 
     @Override
@@ -184,7 +186,11 @@ public class TestCatalogJanitor {
         this.ct.stop();
       }
       if (this.connection != null) {
-        HConnectionManager.deleteConnection(this.connection.getConfiguration());
+        try {
+          this.connection.close();
+        } catch (IOException e) {
+          // TODO: should be more careful here?
+        }
       }
     }
   }

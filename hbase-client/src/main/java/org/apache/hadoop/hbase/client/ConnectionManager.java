@@ -38,6 +38,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -581,6 +582,15 @@ class ConnectionManager {
      HConnectionImplementation(Configuration conf, boolean managed) throws IOException {
        this(conf, managed, null, null);
      }
+
+    /**
+     * Creates an "unmanaged" instance.
+     * This will be the default behavior following HBASE-9117.
+     */
+    HConnectionImplementation(Configuration conf, ExecutorService pool, User user)
+        throws IOException {
+      this(conf, false, pool, user);
+    }
 
     /**
      * constructor

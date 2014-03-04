@@ -139,7 +139,7 @@ public class TestMetaReaderEditorNoCluster {
     // This is a servername we use in a few places below.
     ServerName sn = ServerName.valueOf("example.com", 1234, System.currentTimeMillis());
 
-    HConnection connection;
+    HConnection connection = null;
     CatalogTracker ct = null;
     try {
       // Mock an ClientProtocol. Our mock implementation will fail a few
@@ -218,7 +218,7 @@ public class TestMetaReaderEditorNoCluster {
         scan((RpcController)Mockito.any(), (ScanRequest)Mockito.any());
     } finally {
       if (ct != null) ct.stop();
-      HConnectionManager.deleteConnection(UTIL.getConfiguration());
+      if (connection != null) connection.close();
       zkw.close();
     }
   }

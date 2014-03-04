@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -16,27 +16,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.client;
 
-package org.apache.hadoop.hbase;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.security.User;
 
-import org.apache.hadoop.hbase.ResourceChecker.Phase;
-import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
 
 /**
- * Monitor the resources. use by the tests All resources in {@link ResourceCheckerJUnitListener}
- *  plus the number of connection.
+ * This implementation defers closure until the harness is shut down. Modeled
+ * after {@link HBaseTestingUtility.HBaseAdminForTests}
  */
-public class ServerResourceCheckerJUnitListener extends ResourceCheckerJUnitListener {
-
-  static class ConnectionCountResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
-    @Override
-    public int getVal(Phase phase) {
-      return HConnectionTestingUtility.getConnectionCount();
-    }
+public class HConnectionImplForTests extends ConnectionManager.HConnectionImplementation {
+  HConnectionImplForTests(Configuration conf, ExecutorService pool, User user)
+      throws IOException {
+    super(conf, pool, user);
   }
 
   @Override
-  protected void addResourceAnalyzer(ResourceChecker rc) {
-    rc.addResourceAnalyzer(new ConnectionCountResourceAnalyzer());
+  public void close() {
+    LOG.warn("close() called on HConnection instance returned from HBaseTestingUtility.getConnection()");
+  }
+
+  /** Actually closes the connection */
+  public void close0() {
+    super.close();
   }
 }

@@ -104,7 +104,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Run tests that use the HBase clients; {@link HTable} and {@link HTablePool}.
+ * Run tests that use the HBase clients; {@link HTable} and {@link HConnection}.
  * Sets up the HBase mini cluster once at start and runs through all client tests.
  * Each creates a table named for the method and does its stuff against that.
  */
@@ -244,7 +244,7 @@ public class TestFromClientSide {
      // Then a ZooKeeperKeepAliveConnection
      ConnectionManager.HConnectionImplementation connection1 =
        (ConnectionManager.HConnectionImplementation)
-         HConnectionManager.getConnection(newConfig);
+         HConnectionManager.createConnection(newConfig);
 
      ZooKeeperKeepAliveConnection z1 = connection1.getKeepAliveZooKeeperWatcher();
      z1.getRecoverableZooKeeper().getZooKeeper().exists("/z1", false);
@@ -266,7 +266,7 @@ public class TestFromClientSide {
      newConfig2.set(HConstants.HBASE_CLIENT_INSTANCE_ID, "6789");
      ConnectionManager.HConnectionImplementation connection2 =
        (ConnectionManager.HConnectionImplementation)
-         HConnectionManager.getConnection(newConfig2);
+         HConnectionManager.createConnection(newConfig2);
 
      assertTrue("connections should be different ", connection1 != connection2);
 
@@ -292,7 +292,7 @@ public class TestFromClientSide {
      z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
 
 
-     HConnectionManager.deleteConnection(newConfig);
+     connection1.close();
      try {
        z2.getRecoverableZooKeeper().getZooKeeper().exists("/z2", false);
        assertTrue("We should not have a valid connection for z2", false);
@@ -303,7 +303,7 @@ public class TestFromClientSide {
      // We expect success here.
 
 
-     HConnectionManager.deleteConnection(newConfig2);
+     connection2.close();
      try {
        z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
        assertTrue("We should not have a valid connection for z4", false);
@@ -317,8 +317,7 @@ public class TestFromClientSide {
   @Test
   public void testRegionCachePreWarm() throws Exception {
     LOG.info("Starting testRegionCachePreWarm");
-    final TableName TABLENAME =
-        TableName.valueOf("testCachePrewarm");
+    final TableName TABLENAME = TableName.valueOf("testCachePrewarm");
     Configuration conf = TEST_UTIL.getConfiguration();
 
     // Set up test table:
@@ -398,9 +397,18 @@ public class TestFromClientSide {
   public void testGetConfiguration() throws Exception {
     byte[] TABLE = Bytes.toBytes("testGetConfiguration");
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
+    TEST_UTIL.createTable(TABLE, FAMILIES);
     Configuration conf = TEST_UTIL.getConfiguration();
-    HTable table = TEST_UTIL.createTable(TABLE, FAMILIES, conf);
-    assertSame(conf, table.getConfiguration());
+    HConnection conn = null;
+    HTableInterface table = null;
+    try {
+      conn = HConnectionManager.createConnection(conf);
+      table = conn.getTable(TABLE);
+      assertSame(conf, table.getConfiguration());
+    } finally {
+      if (table != null) table.close();
+      if (conn != null) conn.close();
+    }
   }
 
   /**
@@ -4670,7 +4678,7 @@ public class TestFromClientSide {
     conf.setInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, poolSize);
 
     HTable table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY },
-        conf, Integer.MAX_VALUE);
+        Integer.MAX_VALUE);
 
     final long ts = EnvironmentEdgeManager.currentTimeMillis();
     Get get = new Get(ROW);
@@ -4707,7 +4715,7 @@ public class TestFromClientSide {
     conf.setInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, poolSize);
 
     final HTable table = TEST_UTIL.createTable(tableName,
-        new byte[][] { FAMILY }, conf, 3);
+        new byte[][] { FAMILY }, 3);
 
     final long ts = EnvironmentEdgeManager.currentTimeMillis();
     final Get get = new Get(ROW);
@@ -5829,8 +5837,7 @@ public class TestFromClientSide {
     byte[][] FAMILIES = makeNAscii(FAMILY, 3);
     byte[][] VALUES = makeN(VALUE, 5);
     long[] ts = { 1000, 2000, 3000, 4000, 5000 };
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES,
-        TEST_UTIL.getConfiguration(), 3);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, 3);
 
     Put put = new Put(ROW);
     put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);

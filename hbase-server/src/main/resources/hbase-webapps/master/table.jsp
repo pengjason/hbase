@@ -315,7 +315,7 @@
 }
 } // end else
 
-HConnectionManager.deleteConnection(hbadmin.getConfiguration());
+hbadmin.close();
 %>
 
 

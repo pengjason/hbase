@@ -75,8 +75,8 @@ public class CoprocessorHConnection implements ClusterConnection {
    */
   public static ClusterConnection getConnectionForEnvironment(CoprocessorEnvironment env)
       throws IOException {
-    ClusterConnection connection =
-        ConnectionManager.createConnectionInternal(env.getConfiguration());
+    ClusterConnection connection = (ClusterConnection)
+        ConnectionManager.createConnection(env.getConfiguration());
     // this bit is a little hacky - just trying to get it going for the moment
     if (env instanceof RegionCoprocessorEnvironment) {
       RegionCoprocessorEnvironment e = (RegionCoprocessorEnvironment) env;

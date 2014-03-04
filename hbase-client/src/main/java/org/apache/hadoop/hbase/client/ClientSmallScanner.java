@@ -70,7 +70,7 @@ public class ClientSmallScanner extends ClientScanner {
    */
   public ClientSmallScanner(final Configuration conf, final Scan scan,
       final TableName tableName) throws IOException {
-    this(conf, scan, tableName, HConnectionManager.getConnection(conf));
+    this(conf, scan, tableName, HConnectionManager.createConnection(conf));
   }
 
   /**

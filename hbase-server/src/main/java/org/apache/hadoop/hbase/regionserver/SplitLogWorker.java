@@ -35,12 +35,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -104,7 +102,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   private boolean workerInGrabTask = false;
   private final int report_period;
   private RegionServerServices server = null;
-  private Configuration conf = null;
   protected final AtomicInteger tasksInProgress = new AtomicInteger(0);
   private int maxConcurrentTasks = 0;
 
@@ -116,7 +113,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     this.splitTaskExecutor = splitTaskExecutor;
     report_period = conf.getInt("hbase.splitlog.report.period",
       conf.getInt("hbase.splitlog.manager.timeout", SplitLogManager.DEFAULT_TIMEOUT) / 3);
-    this.conf = conf;
     this.executorService = this.server.getExecutorService();
     this.maxConcurrentTasks =
         conf.getInt("hbase.regionserver.wal.max.splitters", DEFAULT_MAX_SPLITTERS);
@@ -175,11 +171,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     try {
       LOG.info("SplitLogWorker " + this.serverName + " starting");
       this.watcher.registerListener(this);
-      boolean distributedLogReplay = HLogSplitter.isDistributedLogReplay(conf);
-      if (distributedLogReplay) {
-        // initialize a new connection for splitlogworker configuration
-        HConnectionManager.getConnection(conf);
-      }
 
       // wait for master to create the splitLogZnode
       int res = -1;
@@ -302,7 +293,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
    */
   private void grabTask(String path) {
     Stat stat = new Stat();
-    long t = -1;
     byte[] data;
     synchronized (grabTaskLock) {
       currentTask = path;
@@ -378,11 +368,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
    * This method is also used to periodically heartbeat the task progress by transitioning the node
    * from OWNED to OWNED.
    * <p>
-   * @param isFirstTime
-   * @param zkw
-   * @param server
-   * @param task
-   * @param taskZKVersion
    * @return non-negative integer value when task can be owned by current region server otherwise -1
    */
   protected static int attemptToOwnTask(boolean isFirstTime, ZooKeeperWatcher zkw,
@@ -443,8 +428,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
   /**
    * Submit a log split task to executor service
-   * @param curTask
-   * @param curTaskZKVersion
    */
   void submitTask(final String curTask, final int curTaskZKVersion, final int reportPeriod) {
     final MutableInt zkVersion = new MutableInt(curTaskZKVersion);

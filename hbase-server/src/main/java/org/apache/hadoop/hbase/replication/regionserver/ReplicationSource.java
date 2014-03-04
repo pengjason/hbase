@@ -84,7 +84,6 @@ public class ReplicationSource extends Thread
   private HConnection conn;
   private ReplicationQueues replicationQueues;
   private ReplicationPeers replicationPeers;
-  private Configuration conf;
   private ReplicationQueueInfo replicationQueueInfo;
   // id of the peer cluster this source replicates to
   private String peerId;
@@ -150,48 +149,47 @@ public class ReplicationSource extends Thread
       final ReplicationSourceManager manager, final ReplicationQueues replicationQueues,
       final ReplicationPeers replicationPeers, final Stoppable stopper,
       final String peerClusterZnode, final UUID clusterId) throws IOException {
+    Configuration c = HBaseConfiguration.create(conf);
+    decorateConf(c);
     this.stopper = stopper;
-    this.conf = HBaseConfiguration.create(conf);
-    decorateConf();
     this.replicationQueueSizeCapacity =
-        this.conf.getLong("replication.source.size.capacity", 1024*1024*64);
+        c.getLong("replication.source.size.capacity", 1024*1024*64);
     this.replicationQueueNbCapacity =
-        this.conf.getInt("replication.source.nb.capacity", 25000);
-    this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 10);
-    this.socketTimeoutMultiplier = this.conf.getInt("replication.source.socketTimeoutMultiplier",
+        c.getInt("replication.source.nb.capacity", 25000);
+    this.maxRetriesMultiplier = c.getInt("replication.source.maxretriesmultiplier", 10);
+    this.socketTimeoutMultiplier = c.getInt("replication.source.socketTimeoutMultiplier",
         maxRetriesMultiplier * maxRetriesMultiplier);
     this.queue =
         new PriorityBlockingQueue<Path>(
-            this.conf.getInt("hbase.regionserver.maxlogs", 32),
+            c.getInt("hbase.regionserver.maxlogs", 32),
             new LogsComparator());
-    // TODO: This connection is replication specific or we should make it particular to
-    // replication and make replication specific settings such as compression or codec to use
-    // passing Cells.
-    this.conn = HConnectionManager.getConnection(this.conf);
-    long bandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
+    // TODO: This connection is replication specific. Consider replication
+    // specific settings such as compression or codec to use passing Cells.
+    this.conn = HConnectionManager.createConnection(c);
+    long bandwidth = c.getLong("replication.source.per.peer.node.bandwidth", 0);
     this.throttler = new ReplicationThrottler((double)bandwidth/10.0);
     this.replicationQueues = replicationQueues;
     this.replicationPeers = replicationPeers;
     this.manager = manager;
     this.sleepForRetries =
-        this.conf.getLong("replication.source.sleepforretries", 1000);
+        c.getLong("replication.source.sleepforretries", 1000);
     this.fs = fs;
     this.metrics = new MetricsSource(peerClusterZnode);
-    this.repLogReader = new ReplicationHLogReaderManager(this.fs, this.conf);
+    this.repLogReader = new ReplicationHLogReaderManager(this.fs, c);
     this.clusterId = clusterId;
 
     this.peerClusterZnode = peerClusterZnode;
     this.replicationQueueInfo = new ReplicationQueueInfo(peerClusterZnode);
     // ReplicationQueueInfo parses the peerId out of the znode for us
     this.peerId = this.replicationQueueInfo.getPeerId();
-    this.replicationSinkMgr = new ReplicationSinkManager(conn, peerId, replicationPeers, this.conf);
-    this.logQueueWarnThreshold = this.conf.getInt("replication.source.log.queue.warn", 2);
+    this.replicationSinkMgr = new ReplicationSinkManager(conn, peerId, replicationPeers, c);
+    this.logQueueWarnThreshold = c.getInt("replication.source.log.queue.warn", 2);
   }
 
-  private void decorateConf() {
-    String replicationCodec = this.conf.get(HConstants.REPLICATION_CODEC_CONF_KEY);
+  private void decorateConf(Configuration conf) {
+    String replicationCodec = conf.get(HConstants.REPLICATION_CODEC_CONF_KEY);
     if (StringUtils.isNotEmpty(replicationCodec)) {
-      this.conf.set(HConstants.RPC_CODEC_CONF_KEY, replicationCodec);
+      conf.set(HConstants.RPC_CODEC_CONF_KEY, replicationCodec);
     }
   }
 

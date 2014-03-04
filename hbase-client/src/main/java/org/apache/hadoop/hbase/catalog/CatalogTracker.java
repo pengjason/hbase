@@ -147,7 +147,7 @@ public class CatalogTracker {
   public CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
       Abortable abortable)
   throws IOException {
-    this(zk, conf, HConnectionManager.getConnection(conf), abortable);
+    this(zk, conf, HConnectionManager.createConnection(conf), abortable);
   }
 
   public CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,

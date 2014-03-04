@@ -95,7 +95,7 @@ public class ReplicationAdmin implements Closeable {
       throw new RuntimeException("hbase.replication isn't true, please " +
           "enable it in order to use replication");
     }
-    this.connection = HConnectionManager.getConnection(conf);
+    this.connection = HConnectionManager.createConnection(conf);
     ZooKeeperWatcher zkw = createZooKeeperWatcher();
     try {
       this.replicationPeers = ReplicationFactory.getReplicationPeers(zkw, conf, this.connection);

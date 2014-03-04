@@ -29,7 +29,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -494,7 +493,6 @@ public class MiniHBaseCluster extends HBaseCluster {
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
     }
-    HConnectionManager.deleteAllConnections(false);
   }
 
   @Override

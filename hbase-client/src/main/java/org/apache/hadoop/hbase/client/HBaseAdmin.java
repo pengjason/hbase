@@ -187,9 +187,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public HBaseAdmin(Configuration c)
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
-    // Will not leak connections, as the new implementation of the constructor
-    // does not throw exceptions anymore.
-    this(ConnectionManager.getConnectionInternal(new Configuration(c)));
+    this(ConnectionManager.createConnection(new Configuration(c)));
     this.cleanupConnectionOnClose = true;
   }
 
@@ -2331,6 +2329,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param conf system configuration
    * @throws MasterNotRunningException if the master is not running
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
+   * @deprecated use
    */
   public static void checkHBaseAvailable(Configuration conf)
     throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException, IOException {
@@ -2342,7 +2341,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
     ConnectionManager.HConnectionImplementation connection
       = (ConnectionManager.HConnectionImplementation)
-      HConnectionManager.getConnection(copyOfConf);
+      HConnectionManager.createConnection(copyOfConf);
 
     try {
       // Check ZK first.

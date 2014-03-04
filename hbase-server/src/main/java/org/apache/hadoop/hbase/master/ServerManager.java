@@ -190,7 +190,7 @@ public class ServerManager {
     Configuration c = master.getConfiguration();
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
-    this.connection = connect ? HConnectionManager.getConnection(c) : null;
+    this.connection = connect ? HConnectionManager.createConnection(c) : null;
   }
 
   /**
@@ -271,7 +271,6 @@ public class ServerManager {
    * Check is a server of same host and port already exists,
    * if not, or the existed one got a smaller start code, record it.
    *
-   * @param sn the server to check and record
    * @param sl the server load on the server
    * @return true if the server is recorded, otherwise, false
    */

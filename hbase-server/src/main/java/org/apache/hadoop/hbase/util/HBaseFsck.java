@@ -75,7 +75,6 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnectable;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
@@ -1378,25 +1377,20 @@ public class HBaseFsck extends Configured {
    */
   private void loadDisabledTables()
   throws ZooKeeperConnectionException, IOException {
-    HConnectionManager.execute(new HConnectable<Void>(getConf()) {
-      @Override
-      public Void connect(HConnection connection) throws IOException {
-        ZooKeeperWatcher zkw = createZooKeeperWatcher();
-        try {
-          for (TableName tableName :
-              ZKTableReadOnly.getDisabledOrDisablingTables(zkw)) {
-            disabledTables.add(tableName);
-          }
-        } catch (KeeperException ke) {
-          throw new IOException(ke);
-        } catch (InterruptedException e) {
-          throw new InterruptedIOException();
-        } finally {
-          zkw.close();
-        }
-        return null;
+    ZooKeeperWatcher zkw = null;
+    try {
+      zkw = createZooKeeperWatcher();
+      for (TableName tableName :
+        ZKTableReadOnly.getDisabledOrDisablingTables(zkw)) {
+        disabledTables.add(tableName);
       }
-    });
+    } catch (KeeperException ke) {
+      throw new IOException(ke);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException();
+    } finally {
+      if (zkw != null) zkw.close();
+    }
   }
 
   /**

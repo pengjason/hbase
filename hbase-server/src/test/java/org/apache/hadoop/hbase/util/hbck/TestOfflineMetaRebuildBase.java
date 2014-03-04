@@ -58,7 +58,6 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
     // shutdown the minicluster
     TEST_UTIL.shutdownMiniHBaseCluster();
     TEST_UTIL.shutdownMiniZKCluster();
-    HConnectionManager.deleteConnection(conf);
 
     // rebuild meta table from scratch
     HBaseFsck fsck = new HBaseFsck(conf);

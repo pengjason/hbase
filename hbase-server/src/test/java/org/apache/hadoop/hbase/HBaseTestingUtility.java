@@ -59,6 +59,8 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionImplForTests;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -223,7 +225,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       bloomAndCompressionCombinations();
 
   public HBaseTestingUtility() {
-    this(HBaseConfiguration.create());
+    super();
   }
 
   public HBaseTestingUtility(Configuration conf) {
@@ -257,22 +259,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     htu.getConfiguration().set(HConstants.HBASE_DIR, dataTestDir);
     LOG.debug("Setting " + HConstants.HBASE_DIR + " to " + dataTestDir);
     return htu;
-  }
-
-  /**
-   * Returns this classes's instance of {@link Configuration}.  Be careful how
-   * you use the returned Configuration since {@link HConnection} instances
-   * can be shared.  The Map of HConnections is keyed by the Configuration.  If
-   * say, a Connection was being used against a cluster that had been shutdown,
-   * see {@link #shutdownMiniCluster()}, then the Connection will no longer
-   * be wholesome.  Rather than use the return direct, its usually best to
-   * make a copy and use that.  Do
-   * <code>Configuration c = new Configuration(INSTANCE.getConfiguration());</code>
-   * @return Instance of Configuration.
-   */
-  @Override
-  public Configuration getConfiguration() {
-    return super.getConfiguration();
   }
 
   public void setHBaseCluster(HBaseCluster hbaseCluster) {
@@ -962,6 +948,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       hbaseAdmin = null;
     }
 
+    if (conn != null) {
+      ((HConnectionImplForTests) conn).close0();
+      conn = null;
+    }
+
     // unset the configuration for MIN and MAX RS to start
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, -1);
@@ -1040,10 +1031,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param family
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(String tableName, String family)
   throws IOException{
@@ -1052,10 +1040,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param family
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(byte[] tableName, byte[] family)
   throws IOException{
@@ -1064,10 +1049,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(TableName tableName, String[] families)
   throws IOException {
@@ -1080,10 +1062,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param family
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(TableName tableName, byte[] family)
   throws IOException{
@@ -1093,42 +1072,73 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(byte[] tableName, byte[][] families)
   throws IOException {
-    return createTable(tableName, families,
-        new Configuration(getConfiguration()));
+    return createTable(TableName.valueOf(tableName), families);
   }
 
   /**
-   * Create a table.
-   * @param tableName
-   * @param families
+   * Create a table using the implicit connection instance.
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(TableName tableName, byte[][] families)
   throws IOException {
-    return createTable(tableName, families,
-        new Configuration(getConfiguration()));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    for(byte[] family : families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      // Disable blooms (they are on by default as of 0.95) but we disable them here because
+      // tests have hard coded counts of what to expect in block cache, etc., and blooms being
+      // on is interfering.
+      hcd.setBloomFilterType(BloomType.NONE);
+      desc.addFamily(hcd);
+    }
+    getHBaseAdmin().createTable(desc);
+    return (HTable) getConnection().getTable(tableName);
   }
 
+  /**
+   * Create a table using the implicit connection instance.
+   * @return An HTable instance for the created table.
+   */
+  public HTable createTable(TableName tableName, byte[][] families, byte[][] splitRows)
+      throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    for(byte[] family:families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      desc.addFamily(hcd);
+    }
+    getHBaseAdmin().createTable(desc, splitRows);
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
+    return (HTable) getConnection().getTable(tableName);
+  }
+
+  /**
+   * Create a table using the implicit connection instance.
+   * @return An HTable instance for the created table.
+   */
   public HTable createTable(byte[] tableName, byte[][] families,
       int numVersions, byte[] startKey, byte[] endKey, int numRegions) throws IOException {
     return createTable(TableName.valueOf(tableName), families, numVersions,
         startKey, endKey, numRegions);
   }
 
+  /**
+   * Create a table using the implicit connection instance.
+   * @return An HTable instance for the created table.
+   */
   public HTable createTable(String tableName, byte[][] families,
       int numVersions, byte[] startKey, byte[] endKey, int numRegions) throws IOException {
     return createTable(TableName.valueOf(tableName), families, numVersions,
         startKey, endKey, numRegions);
   }
 
+  /**
+   * Create a table using the implicit connection instance.
+   * @return An HTable instance for the created table.
+   */
   public HTable createTable(TableName tableName, byte[][] families,
       int numVersions, byte[] startKey, byte[] endKey, int numRegions)
   throws IOException{
@@ -1141,19 +1151,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc, startKey, endKey, numRegions);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
-    return new HTable(getConfiguration(), tableName);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
    * Create a table.
-   * @param htd
-   * @param families
-   * @param c Configuration to use
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
-  public HTable createTable(HTableDescriptor htd, byte[][] families, Configuration c)
-  throws IOException {
+  public HTable createTable(HTableDescriptor htd, byte[][] families)
+      throws IOException {
     for(byte[] family : families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       // Disable blooms (they are on by default as of 0.95) but we disable them here because
@@ -1165,113 +1171,21 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(htd);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(htd.getTableName());
-    return new HTable(c, htd.getTableName());
+    return (HTable) getConnection().getTable(htd.getTableName());
   }
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param c Configuration to use
    * @return An HTable instance for the created table.
-   * @throws IOException
-   */
-  public HTable createTable(TableName tableName, byte[][] families,
-      final Configuration c)
-  throws IOException {
-    return createTable(new HTableDescriptor(tableName), families, c);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @param c Configuration to use
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   */
-  public HTable createTable(byte[] tableName, byte[][] families,
-      final Configuration c)
-  throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-    for(byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      // Disable blooms (they are on by default as of 0.95) but we disable them here because
-      // tests have hard coded counts of what to expect in block cache, etc., and blooms being
-      // on is interfering.
-      hcd.setBloomFilterType(BloomType.NONE);
-      desc.addFamily(hcd);
-    }
-    getHBaseAdmin().createTable(desc);
-    return new HTable(c, tableName);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @param c Configuration to use
-   * @param numVersions
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   */
-  public HTable createTable(TableName tableName, byte[][] families,
-      final Configuration c, int numVersions)
-  throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    for(byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family)
-          .setMaxVersions(numVersions);
-      desc.addFamily(hcd);
-    }
-    getHBaseAdmin().createTable(desc);
-    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
-    waitUntilAllRegionsAssigned(tableName);
-    return new HTable(c, tableName);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @param c Configuration to use
-   * @param numVersions
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   */
-  public HTable createTable(byte[] tableName, byte[][] families,
-      final Configuration c, int numVersions)
-  throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-    for(byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family)
-          .setMaxVersions(numVersions);
-      desc.addFamily(hcd);
-    }
-    getHBaseAdmin().createTable(desc);
-    return new HTable(c, tableName);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param family
-   * @param numVersions
-   * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(byte[] tableName, byte[] family, int numVersions)
   throws IOException {
-    return createTable(tableName, new byte[][]{family}, numVersions);
+    return createTable(TableName.valueOf(tableName), new byte[][]{family}, numVersions);
   }
 
   /**
    * Create a table.
-   * @param tableName
-   * @param family
-   * @param numVersions
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(TableName tableName, byte[] family, int numVersions)
   throws IOException {
@@ -1280,25 +1194,23 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
-  public HTable createTable(byte[] tableName, byte[][] families,
-      int numVersions)
+  public HTable createTable(byte[] tableName, byte[][] families, int numVersions)
   throws IOException {
-    return createTable(TableName.valueOf(tableName), families, numVersions);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    for(byte[] family : families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family)
+        .setMaxVersions(numVersions);
+      desc.addFamily(hcd);
+    }
+    getHBaseAdmin().createTable(desc);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(TableName tableName, byte[][] families,
       int numVersions)
@@ -1311,16 +1223,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
-    return new HTable(new Configuration(getConfiguration()), tableName);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(byte[] tableName, byte[][] families,
     int numVersions, int blockSize) throws IOException {
@@ -1330,11 +1238,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(TableName tableName, byte[][] families,
     int numVersions, int blockSize) throws IOException {
@@ -1348,16 +1252,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
-    return new HTable(new Configuration(getConfiguration()), tableName);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(byte[] tableName, byte[][] families,
       int[] numVersions)
@@ -1367,11 +1267,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(TableName tableName, byte[][] families,
       int[] numVersions)
@@ -1387,16 +1283,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
-    return new HTable(new Configuration(getConfiguration()), tableName);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
    * Create a table.
-   * @param tableName
-   * @param family
-   * @param splitRows
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(byte[] tableName, byte[] family, byte[][] splitRows)
     throws IOException{
@@ -1405,11 +1297,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param family
-   * @param splitRows
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(TableName tableName, byte[] family, byte[][] splitRows)
       throws IOException {
@@ -1419,28 +1307,16 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc, splitRows);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
-    return new HTable(getConfiguration(), tableName);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param splitRows
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(byte[] tableName, byte[][] families, byte[][] splitRows)
       throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-    for(byte[] family:families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      desc.addFamily(hcd);
-    }
-    getHBaseAdmin().createTable(desc, splitRows);
-    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
-    waitUntilAllRegionsAssigned(TableName.valueOf(tableName));
-    return new HTable(getConfiguration(), tableName);
+    return createTable(TableName.valueOf(tableName), families, splitRows);
   }
 
   /**
@@ -1488,7 +1364,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public static final String START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
 
   /**
-   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * Create a table of name <code>name</code> with {@link #COLUMNS} for
    * families.
    * @param name Name to give table.
    * @param versions How many versions to allow per column.
@@ -1510,7 +1386,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * Create a table of name <code>name</code> with {@link #COLUMNS} for
    * families.
    * @param name Name to give table.
    * @return Column descriptor.
@@ -2371,6 +2247,40 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return hbaseCluster;
   }
 
+  /** This is intended to be an instance of {@link HConnectionImplForTests} */
+  private HConnection conn = null;
+
+  /**
+   * Retrieve a connection to the cluster. This is an instance of
+   * {@link HConnectionImplForTests}, not a standard connection implementation.
+   * The reason being, for testing purposes, it's preferable to allow the test
+   * harness to manage the connection instance.
+   * <p>
+   * Note this means that {@code getConfiguration() != getConnection().getConfiguration()}
+   * </p>
+   * Tests that verify resource cleanup should instead use their own connection
+   * instance:
+   * {@code
+   * Configuration conf = TEST_UTIL.getConfiguration();
+   * HConnection conn = HConnectionManager.createConnection(conf);
+   * ...
+   * conn.close();
+   * }
+   *
+   * @return
+   * @throws IOException
+   */
+  public synchronized HConnection getConnection() throws IOException {
+    if (conn == null) {
+      // inject our customed HConnection, one that doesn't close when requested.
+      Configuration conf = HBaseConfiguration.create(getConfiguration());
+      conf.set("hbase.client.connection.impl",
+        "org.apache.hadoop.hbase.client.HConnectionImplForTests");
+      conn = HConnectionManager.createConnection(conf);
+    }
+    return conn;
+  }
+
   /**
    * Returns a HBaseAdmin instance.
    * This instance is shared between HBaseTestingUtility instance users.
@@ -2383,15 +2293,14 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public synchronized HBaseAdmin getHBaseAdmin()
   throws IOException {
     if (hbaseAdmin == null){
-      hbaseAdmin = new HBaseAdminForTests(getConfiguration());
+      hbaseAdmin = new HBaseAdminForTests(getConnection());
     }
     return hbaseAdmin;
   }
 
   private HBaseAdminForTests hbaseAdmin = null;
   private static class HBaseAdminForTests extends HBaseAdmin {
-    public HBaseAdminForTests(Configuration c) throws MasterNotRunningException,
-        ZooKeeperConnectionException, IOException {
+    public HBaseAdminForTests(HConnection c) throws IOException {
       super(c);
     }
 

@@ -286,7 +286,7 @@ public class TestSnapshotFromMaster {
     UTIL.deleteTable(TABLE_NAME);
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     htd.setCompactionEnabled(false);
-    UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
+    UTIL.createTable(htd, new byte[][] { TEST_FAM });
     // load the table (creates 4 hfiles)
     UTIL.loadTable(new HTable(UTIL.getConfiguration(), TABLE_NAME), TEST_FAM);
     UTIL.flush(TABLE_NAME);

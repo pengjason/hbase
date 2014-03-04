@@ -95,7 +95,7 @@ public class TestMultiParallel {
       // Wait until completing balance
       UTIL.waitFor(15 * 1000, UTIL.predicateNoRegionsInTransition());
     }
-    HConnection conn = HConnectionManager.getConnection(UTIL.getConfiguration());
+    HConnection conn = HConnectionManager.createConnection(UTIL.getConfiguration());
     conn.clearRegionCache();
     conn.close();
     LOG.info("before done");

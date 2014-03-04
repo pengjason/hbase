@@ -705,7 +705,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       if (!success) {
         Configuration conf = job.getConfiguration();
-        HConnection conn = HConnectionManager.getConnection(conf);
+        HConnection conn = HConnectionManager.createConnection(conf);
         TableName tableName = getTableName(conf);
         CounterGroup g = counters.getGroup("undef");
         Iterator<Counter> it = g.iterator();
@@ -723,6 +723,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           HRegionLocation loc = conn.relocateRegion(tableName, key);
           LOG.error("unreferred row " + keyString + ", " + loc);
         }
+        conn.close();
       }
       return success;
     }

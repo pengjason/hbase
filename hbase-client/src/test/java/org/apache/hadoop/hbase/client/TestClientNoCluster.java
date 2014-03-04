@@ -258,8 +258,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     final ClientService.BlockingInterface stub;
 
     ScanOpenNextThenExceptionThenRecoverConnection(Configuration conf,
-        boolean managed, ExecutorService pool) throws IOException {
-      super(conf, managed);
+        ExecutorService pool) throws IOException {
+      super(conf);
       // Mock up my stub so open scanner returns a scanner id and then on next, we throw
       // exceptions for three times and then after that, we return no more to scan.
       this.stub = Mockito.mock(ClientService.BlockingInterface.class);
@@ -289,9 +289,9 @@ public class TestClientNoCluster extends Configured implements Tool {
   extends ConnectionManager.HConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
-    RegionServerStoppedOnScannerOpenConnection(Configuration conf, boolean managed,
+    RegionServerStoppedOnScannerOpenConnection(Configuration conf,
         ExecutorService pool, User user) throws IOException {
-      super(conf, managed);
+      super(conf, pool, user);
       // Mock up my stub so open scanner returns a scanner id and then on next, we throw
       // exceptions for three times and then after that, we return no more to scan.
       this.stub = Mockito.mock(ClientService.BlockingInterface.class);
@@ -321,9 +321,9 @@ public class TestClientNoCluster extends Configured implements Tool {
   extends ConnectionManager.HConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
-    RpcTimeoutConnection(Configuration conf, boolean managed, ExecutorService pool, User user)
+    RpcTimeoutConnection(Configuration conf, ExecutorService pool, User user)
     throws IOException {
-      super(conf, managed);
+      super(conf, pool, user);
       // Mock up my stub so an exists call -- which turns into a get -- throws an exception
       this.stub = Mockito.mock(ClientService.BlockingInterface.class);
       try {
@@ -356,10 +356,9 @@ public class TestClientNoCluster extends Configured implements Tool {
     final AtomicLong sequenceids = new AtomicLong(0);
     private final Configuration conf;
 
-    ManyServersManyRegionsConnection(Configuration conf, boolean managed,
-        ExecutorService pool, User user)
+    ManyServersManyRegionsConnection(Configuration conf, ExecutorService pool, User user)
     throws IOException {
-      super(conf, managed, pool, user);
+      super(conf, pool, user);
       int serverCount = conf.getInt("hbase.test.servers", 10);
       this.serversByClient =
         new HashMap<ServerName, ClientService.BlockingInterface>(serverCount);

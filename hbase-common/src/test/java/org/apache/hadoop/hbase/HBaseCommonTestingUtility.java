@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * Common helpers for testing HBase that do not depend on specific server/etc. things.
- * @see {@link HBaseTestingUtility}
+ * @see {@link org.apache.hadoop.hbase.HBaseCommonTestingUtility}
  *
  */
 @InterfaceAudience.Public
@@ -73,10 +73,9 @@ public class HBaseCommonTestingUtility {
   private File dataTestDir = null;
 
   /**
-   * @return Where to write test data on local filesystem, specific to
-   *  the test.  Useful for tests that do not use a cluster.
-   * Creates it if it does not exist already.
-   * @see #getTestFileSystem()
+   * @return Where to write test data on local filesystem, specific to the
+   * test. Useful for tests that do not use a cluster. Creates it if it does
+   * not exist already.
    */
   public Path getDataTestDir() {
     if (this.dataTestDir == null){
@@ -166,7 +165,6 @@ public class HBaseCommonTestingUtility {
    * Should not be used by the unit tests, hence its's private.
    * Unit test will use a subdirectory of this directory.
    * @see #setupDataTestDir()
-   * @see #getTestFileSystem()
    */
   private Path getBaseTestDir() {
     String PathName = System.getProperty(

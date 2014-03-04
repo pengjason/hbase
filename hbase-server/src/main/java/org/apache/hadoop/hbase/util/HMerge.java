@@ -105,13 +105,13 @@ class HMerge {
   throws IOException {
     boolean masterIsRunning = false;
     if (testMasterRunning) {
-      masterIsRunning = HConnectionManager
-          .execute(new HConnectable<Boolean>(conf) {
-            @Override
-            public Boolean connect(HConnection connection) throws IOException {
-              return connection.isMasterRunning();
-            }
-          });
+      HConnection conn = null;
+      try {
+        conn = HConnectionManager.createConnection(conf);
+        masterIsRunning = conn.isMasterRunning();
+      } finally {
+        if (conn != null) conn.close();
+      }
     }
     if (tableName.equals(TableName.META_TABLE_NAME)) {
       if (masterIsRunning) {

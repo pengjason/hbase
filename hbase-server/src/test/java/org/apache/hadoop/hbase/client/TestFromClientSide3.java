@@ -113,8 +113,7 @@ public class TestFromClientSide3 {
       byte[] row, byte[] family, int nFlushes, int nPuts) throws Exception {
 
     // connection needed for poll-wait
-    HConnection conn = HConnectionManager.getConnection(TEST_UTIL
-        .getConfiguration());
+    HConnection conn = TEST_UTIL.getConnection();
     HRegionLocation loc = table.getRegionLocation(row, true);
     AdminProtos.AdminService.BlockingInterface server = conn.getAdmin(loc.getServerName());
     byte[] regName = loc.getRegionInfo().getRegionName();
@@ -154,8 +153,7 @@ public class TestFromClientSide3 {
         TableName.valueOf(tableName);
     HTable hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-    HConnection connection = HConnectionManager.getConnection(TEST_UTIL
-        .getConfiguration());
+    HConnection connection = TEST_UTIL.getConnection();
 
     // Create 3 store files.
     byte[] row = Bytes.toBytes(random.nextInt());

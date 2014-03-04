@@ -1799,7 +1799,7 @@ public class HLogSplitter {
         synchronized (this.tableNameToHConnectionMap) {
           hconn = this.tableNameToHConnectionMap.get(tableName);
           if (hconn == null) {
-            hconn = HConnectionManager.getConnection(conf);
+            hconn = HConnectionManager.createConnection(conf);
             this.tableNameToHConnectionMap.put(tableName, hconn);
           }
         }

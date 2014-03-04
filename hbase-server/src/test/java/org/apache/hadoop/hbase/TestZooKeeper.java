@@ -69,8 +69,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
-
 @Category(LargeTests.class)
 public class TestZooKeeper {
   private final Log LOG = LogFactory.getLog(this.getClass());
@@ -140,7 +138,7 @@ public class TestZooKeeper {
     // We don't want to share the connection as we will check its state
     c.set(HConstants.HBASE_CLIENT_INSTANCE_ID, "1111");
 
-    HConnection connection = HConnectionManager.getConnection(c);
+    HConnection connection = HConnectionManager.createConnection(c);
 
     ZooKeeperWatcher connectionZK = getZooKeeperWatcher(connection);
     LOG.info("ZooKeeperWatcher= 0x"+ Integer.toHexString(
@@ -280,13 +278,15 @@ public class TestZooKeeper {
     ipMeta.exists(new Get(row));
 
     // make sure they aren't the same
-    ZooKeeperWatcher z1 =
-      getZooKeeperWatcher(HConnectionManager.getConnection(localMeta.getConfiguration()));
-    ZooKeeperWatcher z2 =
-      getZooKeeperWatcher(HConnectionManager.getConnection(otherConf));
+    HConnection c1 = HConnectionManager.createConnection(localMeta.getConfiguration());
+    ZooKeeperWatcher z1 = getZooKeeperWatcher(c1);
+    HConnection c2 = HConnectionManager.createConnection(otherConf);
+    ZooKeeperWatcher z2 = getZooKeeperWatcher(c2);
     assertFalse(z1 == z2);
     assertFalse(z1.getQuorum().equals(z2.getQuorum()));
 
+    c1.close();
+    c2.close();
     localMeta.close();
     ipMeta.close();
   }

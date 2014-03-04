@@ -45,6 +45,7 @@ import com.google.common.collect.Sets;
 @InterfaceAudience.Private
 public class DistributedHBaseCluster extends HBaseCluster {
 
+  private HConnection conn;
   private HBaseAdmin admin;
 
   private ClusterManager clusterManager;
@@ -53,7 +54,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
       throws IOException {
     super(conf);
     this.clusterManager = clusterManager;
-    this.admin = new HBaseAdmin(conf);
+    this.conn = HConnectionManager.createConnection(conf);
+    this.admin = new HBaseAdmin(conn);
     this.initialClusterStatus = getClusterStatus();
   }
 
@@ -81,9 +83,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   @Override
   public void close() throws IOException {
-    if (this.admin != null) {
-      admin.close();
-    }
+    if (this.admin != null) admin.close();
+    if (this.conn != null) conn.close();
   }
 
   @Override
@@ -138,7 +139,6 @@ public class DistributedHBaseCluster extends HBaseCluster {
   @Override
   public MasterService.BlockingInterface getMaster()
   throws IOException {
-    HConnection conn = HConnectionManager.getConnection(conf);
     return conn.getMaster();
   }
 

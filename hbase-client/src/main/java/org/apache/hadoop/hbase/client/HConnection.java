@@ -235,9 +235,11 @@ public interface HConnection extends Abortable, Closeable {
   TableName[] listTableNames() throws IOException;
 
   /**
+   * Connects to the master to get the table descriptor.
    * @param tableName table name
    * @return table metadata
-   * @throws IOException if a remote or network exception occurs
+   * @throws IOException if the connection to master fails or if the table
+   *  is not found.
    */
   HTableDescriptor getHTableDescriptor(TableName tableName)
   throws IOException;

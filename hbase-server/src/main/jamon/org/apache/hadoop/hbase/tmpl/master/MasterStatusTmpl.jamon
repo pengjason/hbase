@@ -43,7 +43,6 @@ org.apache.hadoop.hbase.NamespaceDescriptor;
 org.apache.hadoop.hbase.ServerLoad;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.client.HBaseAdmin;
-org.apache.hadoop.hbase.client.HConnectionManager;
 org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.TableName;
@@ -418,6 +417,6 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 </table>
 </%if>
 <%java>
-   HConnectionManager.deleteConnection(admin.getConfiguration());
+   admin.close();
 </%java>
 </%def>

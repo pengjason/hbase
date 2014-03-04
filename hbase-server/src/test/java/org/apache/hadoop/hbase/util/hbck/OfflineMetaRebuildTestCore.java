@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -110,7 +109,6 @@ public class OfflineMetaRebuildTestCore {
   @After
   public void tearDownAfter() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-    HConnectionManager.deleteConnection(conf);
   }
 
   /**

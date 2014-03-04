@@ -197,7 +197,7 @@ public class HTable implements HTableInterface {
       this.connection = null;
       return;
     }
-    this.connection = ConnectionManager.getConnectionInternal(conf);
+    this.connection = (ClusterConnection) ConnectionManager.createConnection(conf);
     this.configuration = conf;
 
     this.pool = getDefaultExecutor(conf);
@@ -277,7 +277,7 @@ public class HTable implements HTableInterface {
   @Deprecated
   public HTable(Configuration conf, final TableName tableName, final ExecutorService pool)
       throws IOException {
-    this.connection = ConnectionManager.getConnectionInternal(conf);
+    this.connection = (ClusterConnection) ConnectionManager.createConnection(conf);
     this.configuration = conf;
     this.pool = pool;
     this.tableName = tableName;
@@ -468,7 +468,7 @@ public class HTable implements HTableInterface {
   @Deprecated
   public static boolean isTableEnabled(Configuration conf,
       final TableName tableName) throws IOException {
-    return HConnectionManager.execute(new HConnectable<Boolean>(conf) {
+    return ConnectionManager.execute(new HConnectable<Boolean>(conf) {
       @Override
       public Boolean connect(HConnection connection) throws IOException {
         return connection.isTableEnabled(tableName);
@@ -1498,7 +1498,7 @@ public class HTable implements HTableInterface {
   public static void setRegionCachePrefetch(
       final TableName tableName,
       final boolean enable) throws IOException {
-    HConnectionManager.execute(new HConnectable<Void>(HBaseConfiguration
+    ConnectionManager.execute(new HConnectable<Void>(HBaseConfiguration
         .create()) {
       @Override
       public Void connect(HConnection connection) throws IOException {
@@ -1526,7 +1526,7 @@ public class HTable implements HTableInterface {
   public static void setRegionCachePrefetch(final Configuration conf,
       final TableName tableName,
       final boolean enable) throws IOException {
-    HConnectionManager.execute(new HConnectable<Void>(conf) {
+    ConnectionManager.execute(new HConnectable<Void>(conf) {
       @Override
       public Void connect(HConnection connection) throws IOException {
         connection.setRegionCachePrefetch(tableName, enable);
@@ -1550,7 +1550,7 @@ public class HTable implements HTableInterface {
 
   public static boolean getRegionCachePrefetch(final Configuration conf,
       final TableName tableName) throws IOException {
-    return HConnectionManager.execute(new HConnectable<Boolean>(conf) {
+    return ConnectionManager.execute(new HConnectable<Boolean>(conf) {
       @Override
       public Boolean connect(HConnection connection) throws IOException {
         return connection.getRegionCachePrefetch(tableName);
@@ -1571,7 +1571,7 @@ public class HTable implements HTableInterface {
 
   public static boolean getRegionCachePrefetch(
       final TableName tableName) throws IOException {
-    return HConnectionManager.execute(new HConnectable<Boolean>(
+    return ConnectionManager.execute(new HConnectable<Boolean>(
         HBaseConfiguration.create()) {
       @Override
       public Boolean connect(HConnection connection) throws IOException {

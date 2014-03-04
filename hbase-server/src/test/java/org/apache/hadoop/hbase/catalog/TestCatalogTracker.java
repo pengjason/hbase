@@ -111,9 +111,6 @@ public class TestCatalogTracker {
       LOG.warn("Unable to delete hbase:meta location", e);
     }
 
-    // Clear out our doctored connection or could mess up subsequent tests.
-    HConnectionManager.deleteConnection(UTIL.getConfiguration());
-
     this.watcher.close();
   }
 
@@ -175,6 +172,7 @@ public class TestCatalogTracker {
     ct.stop();
     // Join the thread... should exit shortly.
     t.join();
+    connection.close();
   }
 
   private void testVerifyMetaRegionLocationWithException(Exception ex)
@@ -194,6 +192,7 @@ public class TestCatalogTracker {
     long timeout = UTIL.getConfiguration().
       getLong("hbase.catalog.verification.timeout", 1000);
     Assert.assertFalse(ct.verifyMetaRegionLocation(timeout));
+    connection.close();
   }
 
   /**
@@ -303,8 +302,7 @@ public class TestCatalogTracker {
    * {@link HConnection#getAdmin(ServerName)} is called, returns the passed
    * {@link ClientProtos.ClientService.BlockingInterface} instance when
    * {@link HConnection#getClient(ServerName)} is called (Be sure to call
-   * {@link HConnectionManager#deleteConnection(org.apache.hadoop.conf.Configuration)}
-   * when done with this mocked Connection.
+   * {@link HConnection#close()} when done with this mocked Connection.
    * @throws IOException
    */
   private HConnection mockConnection(final AdminProtos.AdminService.BlockingInterface admin,

@@ -80,7 +80,7 @@ public class ClientScanner extends AbstractClientScanner {
      */
     public ClientScanner(final Configuration conf, final Scan scan,
         final TableName tableName) throws IOException {
-      this(conf, scan, tableName, HConnectionManager.getConnection(conf));
+      this(conf, scan, tableName, HConnectionManager.createConnection(conf));
     }
 
     /**

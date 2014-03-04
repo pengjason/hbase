@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -45,6 +46,23 @@ public class ReflectionUtils {
     } catch (NoSuchMethodException e) {
       throw new UnsupportedOperationException(
           "Unable to find suitable constructor for class " + className, e);
+    }
+  }
+
+  /**
+   * Like {@link Class#getDeclaredField(String)}, but walks the inheritance graph.
+   */
+  public static Field getAllDeclaredField(Class<?> clazz, String fieldName)
+      throws NoSuchFieldException {
+    try {
+      return clazz.getDeclaredField(fieldName);
+    } catch (NoSuchFieldException e) {
+      Class<?> parent = clazz.getSuperclass();
+      if (parent != null) {
+        return getAllDeclaredField(parent, fieldName);
+      } else {
+        throw e;
+      }
     }
   }
 }

@@ -27,16 +27,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mortbay.log.Log;
-import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -47,13 +44,10 @@ public class TestHBaseAdminNoCluster {
    * Verify that PleaseHoldException gets retried.
    * HBASE-8764
    * @throws IOException 
-   * @throws ZooKeeperConnectionException 
-   * @throws MasterNotRunningException 
-   * @throws ServiceException 
+   * @throws ServiceException
    */
   @Test
-  public void testMasterMonitorCollableRetries()
-  throws MasterNotRunningException, ZooKeeperConnectionException, IOException, ServiceException {
+  public void testMasterMonitorCollableRetries() throws IOException, ServiceException {
     Configuration configuration = HBaseConfiguration.create();
     // Set the pause and retry count way down.
     configuration.setLong(HConstants.HBASE_CLIENT_PAUSE, 1);
@@ -71,7 +65,7 @@ public class TestHBaseAdminNoCluster {
         thenThrow(new ServiceException("Test fail").initCause(new PleaseHoldException("test")));
     Mockito.when(connection.getKeepAliveMasterService()).thenReturn(masterAdmin);
     // Mock up our admin Interfaces
-    HBaseAdmin admin = new HBaseAdmin(configuration);
+    HBaseAdmin admin = new HBaseAdmin(connection);
     try {
       HTableDescriptor htd =
           new HTableDescriptor(TableName.valueOf("testMasterMonitorCollableRetries"));
@@ -87,7 +81,7 @@ public class TestHBaseAdminNoCluster {
         (CreateTableRequest)Mockito.any());
     } finally {
       admin.close();
-      if (connection != null)HConnectionManager.deleteConnection(configuration);
+      if (connection != null) connection.close();
     }
   }
 }
