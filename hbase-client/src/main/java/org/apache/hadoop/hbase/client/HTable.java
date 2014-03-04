@@ -1682,18 +1682,4 @@ public class HTable implements HTableInterface {
   public String toString() {
     return tableName + ";" + connection;
   }
-
-  /**
-   * Run basic test.
-   * @param args Pass table name and row and will get the content.
-   * @throws IOException
-   */
-  public static void main(String[] args) throws IOException {
-    HTable t = new HTable(HBaseConfiguration.create(), args[0]);
-    try {
-      System.out.println(t.get(new Get(Bytes.toBytes(args[1]))));
-    } finally {
-      t.close();
-    }
-  }
 }

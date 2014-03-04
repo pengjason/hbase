@@ -76,24 +76,24 @@ public class HTableMultiplexer {
   /** The map between each region server to its flush worker */
   private Map<HRegionLocation, HTableFlushWorker> serverToFlushWorkerMap;
 
-  private Configuration conf;
+  private HConnection conn;
   private int retryNum;
   private int perRegionServerBufferQueueSize;
   
   /**
    * 
-   * @param conf The HBaseConfiguration
+   * @param conn The HConnection
    * @param perRegionServerBufferQueueSize determines the max number of the buffered Put ops 
    *         for each region server before dropping the request.
    */
-  public HTableMultiplexer(Configuration conf,
+  public HTableMultiplexer(HConnection conn,
       int perRegionServerBufferQueueSize) throws ZooKeeperConnectionException {
-    this.conf = conf;
+    this.conn = conn;
     this.serverToBufferQueueMap = new ConcurrentHashMap<HRegionLocation,
       LinkedBlockingQueue<PutStatus>>();
     this.serverToFlushWorkerMap = new ConcurrentHashMap<HRegionLocation, HTableFlushWorker>();
     this.tableNameToHTableMap = new ConcurrentSkipListMap<TableName, HTable>();
-    this.retryNum = this.conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+    this.retryNum = this.conn.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     this.perRegionServerBufferQueueSize = perRegionServerBufferQueueSize;
   }
@@ -203,7 +203,7 @@ public class HTableMultiplexer {
       synchronized (this.tableNameToHTableMap) {
         htable = this.tableNameToHTableMap.get(tableName);
         if (htable == null)  {
-          htable = new HTable(conf, tableName);
+          htable = (HTable) conn.getTable(tableName);
           this.tableNameToHTableMap.put(tableName, htable);
         }
       }
@@ -221,7 +221,7 @@ public class HTableMultiplexer {
       serverToBufferQueueMap.put(addr, queue);
 
       // Create the flush worker
-      HTableFlushWorker worker = new HTableFlushWorker(conf, addr,
+      HTableFlushWorker worker = new HTableFlushWorker(conn, addr,
           this, queue, htable);
       this.serverToFlushWorkerMap.put(addr, worker);
 
@@ -406,7 +406,7 @@ public class HTableMultiplexer {
 
   private static class HTableFlushWorker implements Runnable {
     private HRegionLocation addr;
-    private Configuration conf;
+    private HConnection conn;
     private LinkedBlockingQueue<PutStatus> queue;
     private HTableMultiplexer htableMultiplexer;
     private AtomicLong totalFailedPutCount;
@@ -415,11 +415,11 @@ public class HTableMultiplexer {
     private AtomicLong maxLatency;
     private HTable htable; // For Multi
     
-    public HTableFlushWorker(Configuration conf, HRegionLocation addr,
+    public HTableFlushWorker(HConnection conn, HRegionLocation addr,
         HTableMultiplexer htableMultiplexer,
         LinkedBlockingQueue<PutStatus> queue, HTable htable) {
       this.addr = addr;
-      this.conf = conf;
+      this.conn = conn;
       this.htableMultiplexer = htableMultiplexer;
       this.queue = queue;
       this.totalFailedPutCount = new AtomicLong(0);
@@ -471,7 +471,7 @@ public class HTableMultiplexer {
        * The frequency in milliseconds for the current thread to process the corresponding  
        * buffer queue.  
        **/
-      long frequency = conf.getLong(TABLE_MULTIPLEXER_FLUSH_FREQ_MS, 100);
+      long frequency = conn.getConfiguration().getLong(TABLE_MULTIPLEXER_FLUSH_FREQ_MS, 100);
 
       // initial delay
       try {

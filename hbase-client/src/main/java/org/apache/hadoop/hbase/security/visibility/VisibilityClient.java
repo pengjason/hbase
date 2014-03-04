@@ -27,7 +27,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -72,9 +75,11 @@ public class VisibilityClient {
    */
   public static VisibilityLabelsResponse addLabels(Configuration conf, final String[] labels)
       throws Throwable {
-    HTable ht = null;
+    HConnection conn = null;
+    HTableInterface ht = null;
     try {
-      ht = new HTable(conf, LABELS_TABLE_NAME.getName());
+      conn = HConnectionManager.createConnection(conf);
+      ht = conn.getTable(LABELS_TABLE_NAME.getName());
       Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable = 
           new Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse>() {
         ServerRpcController controller = new ServerRpcController();
@@ -100,9 +105,8 @@ public class VisibilityClient {
       return result.values().iterator().next(); // There will be exactly one region for labels
                                                 // table and so one entry in result Map.
     } finally {
-      if (ht != null) {
-        ht.close();
-      }
+      if (ht != null) ht.close();
+      if (conn != null) conn.close();
     }
   }
 
@@ -126,9 +130,11 @@ public class VisibilityClient {
    * @throws Throwable
    */
   public static GetAuthsResponse getAuths(Configuration conf, final String user) throws Throwable {
-    HTable ht = null;
+    HConnection conn = null;
+    HTableInterface ht = null;
     try {
-      ht = new HTable(conf, LABELS_TABLE_NAME.getName());
+      conn = HConnectionManager.createConnection(conf);
+      ht = conn.getTable(LABELS_TABLE_NAME.getName());
       Batch.Call<VisibilityLabelsService, GetAuthsResponse> callable = 
           new Batch.Call<VisibilityLabelsService, GetAuthsResponse>() {
         ServerRpcController controller = new ServerRpcController();
@@ -147,9 +153,8 @@ public class VisibilityClient {
       return result.values().iterator().next(); // There will be exactly one region for labels
                                                 // table and so one entry in result Map.
     } finally {
-      if (ht != null) {
-        ht.close();
-      }
+      if (ht != null) ht.close();
+      if (conn != null) conn.close();
     }
   }
 
@@ -168,9 +173,11 @@ public class VisibilityClient {
 
   private static VisibilityLabelsResponse setOrClearAuths(Configuration conf, final String[] auths,
       final String user, final boolean setOrClear) throws IOException, ServiceException, Throwable {
-    HTable ht = null;
+    HConnection conn = null;
+    HTableInterface ht = null;
     try {
-      ht = new HTable(conf, LABELS_TABLE_NAME.getName());
+      conn = HConnectionManager.createConnection(conf);
+      ht = conn.getTable(LABELS_TABLE_NAME.getName());
       Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable = 
           new Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse>() {
         ServerRpcController controller = new ServerRpcController();
@@ -199,9 +206,8 @@ public class VisibilityClient {
       return result.values().iterator().next(); // There will be exactly one region for labels
                                                 // table and so one entry in result Map.
     } finally {
-      if (ht != null) {
-        ht.close();
-      }
+      if (ht != null) ht.close();
+      if (conn != null) conn.close();
     }
   }
 }

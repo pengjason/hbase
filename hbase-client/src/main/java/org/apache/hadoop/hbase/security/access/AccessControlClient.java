@@ -27,7 +27,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -61,11 +64,13 @@ public class AccessControlClient {
   public static GrantResponse grant(Configuration conf, final TableName tableName,
       final String userName, final byte[] family, final byte[] qual,
       final AccessControlProtos.Permission.Action... actions) throws Throwable {
-    HTable ht = null;
+    HConnection conn = null;
+    HTableInterface ht = null;
     try {
       TableName aclTableName =
           TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");
-      ht = new HTable(conf, aclTableName.getName());
+      conn = HConnectionManager.createConnection(conf);
+      ht = conn.getTable(aclTableName.getName());
       Batch.Call<AccessControlService, GrantResponse> callable =
           new Batch.Call<AccessControlService, GrantResponse>() {
         ServerRpcController controller = new ServerRpcController();
@@ -106,9 +111,8 @@ public class AccessControlClient {
                                                 // table and so one entry in
                                                 // result Map.
     } finally {
-      if (ht != null) {
-        ht.close();
-      }
+      if (ht != null) ht.close();
+      if (conn != null) conn.close();
     }
   }
 
@@ -126,11 +130,13 @@ public class AccessControlClient {
   public static RevokeResponse revoke(Configuration conf, final String username,
       final TableName tableName, final byte[] family, final byte[] qualifier,
       final AccessControlProtos.Permission.Action... actions) throws Throwable {
-    HTable ht = null;
+    HConnection conn = null;
+    HTableInterface ht = null;
     try {
       TableName aclTableName = TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR,
           "acl");
-      ht = new HTable(conf, aclTableName.getName());
+      conn = HConnectionManager.createConnection(conf);
+      ht = conn.getTable(aclTableName.getName());
       Batch.Call<AccessControlService, AccessControlProtos.RevokeResponse> callable =
           new Batch.Call<AccessControlService, AccessControlProtos.RevokeResponse>() {
         ServerRpcController controller = new ServerRpcController();
@@ -171,9 +177,8 @@ public class AccessControlClient {
       return result.values().iterator().next();
 
     } finally {
-      if (ht != null) {
-        ht.close();
-      }
+      if (ht != null) ht.close();
+      if (conn != null) conn.close();
     }
   }
 }

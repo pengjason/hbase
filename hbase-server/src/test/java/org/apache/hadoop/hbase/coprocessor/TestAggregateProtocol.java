@@ -40,6 +40,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import java.io.IOException;
+
 /**
  * A test class to cover aggregate functions, that can be implemented using
  * Coprocessors.
@@ -64,7 +66,6 @@ public class TestAggregateProtocol {
   private static byte[][] ROWS = makeN(ROW, ROWSIZE);
 
   private static HBaseTestingUtility util = new HBaseTestingUtility();
-  private static Configuration conf = util.getConfiguration();
 
   /**
    * A set up method to start the test cluster. AggregateProtocolImpl is
@@ -74,8 +75,8 @@ public class TestAggregateProtocol {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
 
-    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        "org.apache.hadoop.hbase.coprocessor.AggregateImplementation");
+    util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+      "org.apache.hadoop.hbase.coprocessor.AggregateImplementation");
 
     util.startMiniCluster(2);
     HTable table = util.createTable(TEST_TABLE, TEST_FAMILY);
@@ -132,7 +133,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testMedianWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci = 
@@ -153,7 +154,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testRowCountWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(ROWS[2]);
@@ -171,7 +172,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testRowCountAllTable() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
         new LongColumnInterpreter();
@@ -186,8 +187,8 @@ public class TestAggregateProtocol {
    * @throws Throwable
    */
   @Test (timeout=300000)
-  public void testRowCountWithInvalidRange1() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testRowCountWithInvalidRange1() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[2]);
@@ -210,8 +211,8 @@ public class TestAggregateProtocol {
    * @throws Throwable
    */
   @Test (timeout=300000)
-  public void testRowCountWithInvalidRange2() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testRowCountWithInvalidRange2() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[5]);
@@ -229,7 +230,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testRowCountWithNullCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
@@ -241,7 +242,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testRowCountWithPrefixFilter() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
@@ -263,7 +264,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testMaxWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
@@ -277,7 +278,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testMaxWithValidRange2() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
@@ -290,7 +291,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testMaxWithValidRangeWithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
@@ -301,7 +302,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testMaxWithValidRange2WithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -313,8 +314,8 @@ public class TestAggregateProtocol {
   }
 
   @Test (timeout=300000)
-  public void testMaxWithValidRangeWithNullCF() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testMaxWithValidRangeWithNullCF() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
         new LongColumnInterpreter();
     Scan scan = new Scan();
@@ -329,8 +330,8 @@ public class TestAggregateProtocol {
   }
 
   @Test (timeout=300000)
-  public void testMaxWithInvalidRange() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testMaxWithInvalidRange() throws IOException{
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
         new LongColumnInterpreter();
     Scan scan = new Scan();
@@ -354,7 +355,7 @@ public class TestAggregateProtocol {
     scan.setStartRow(ROWS[4]);
     scan.setStopRow(ROWS[4]);
     try {
-      AggregationClient aClient = new AggregationClient(conf);
+      AggregationClient aClient = new AggregationClient(util.getConnection());
       final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
           new LongColumnInterpreter();
       max = aClient.max(TEST_TABLE, ci, scan);
@@ -367,7 +368,7 @@ public class TestAggregateProtocol {
   @Test (timeout=300000)
   public void testMaxWithFilter() throws Throwable {
     Long max = 0l;
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
@@ -387,7 +388,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testMinWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(HConstants.EMPTY_START_ROW);
@@ -404,7 +405,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testMinWithValidRange2() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
@@ -417,7 +418,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testMinWithValidRangeWithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(HConstants.EMPTY_START_ROW);
@@ -431,7 +432,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testMinWithValidRange2WithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -443,8 +444,8 @@ public class TestAggregateProtocol {
   }
 
   @Test (timeout=300000)
-  public void testMinWithValidRangeWithNullCF() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testMinWithValidRangeWithNullCF() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
@@ -460,8 +461,8 @@ public class TestAggregateProtocol {
   }
 
   @Test (timeout=300000)
-  public void testMinWithInvalidRange() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testMinWithInvalidRange() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Long min = null;
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
@@ -477,8 +478,8 @@ public class TestAggregateProtocol {
   }
 
   @Test (timeout=300000)
-  public void testMinWithInvalidRange2() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testMinWithInvalidRange2() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -495,7 +496,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testMinWithFilter() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
@@ -515,7 +516,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testSumWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
@@ -530,7 +531,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testSumWithValidRange2() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
@@ -543,7 +544,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testSumWithValidRangeWithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
@@ -555,7 +556,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testSumWithValidRange2WithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -567,8 +568,8 @@ public class TestAggregateProtocol {
   }
 
   @Test (timeout=300000)
-  public void testSumWithValidRangeWithNullCF() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testSumWithValidRangeWithNullCF() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
@@ -584,8 +585,8 @@ public class TestAggregateProtocol {
   }
 
   @Test (timeout=300000)
-  public void testSumWithInvalidRange() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testSumWithInvalidRange() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -602,7 +603,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testSumWithFilter() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
@@ -622,7 +623,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testAvgWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
@@ -637,7 +638,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testAvgWithValidRange2() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
@@ -650,7 +651,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testAvgWithValidRangeWithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
@@ -662,7 +663,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testAvgWithValidRange2WithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -674,8 +675,8 @@ public class TestAggregateProtocol {
   }
 
   @Test (timeout=300000)
-  public void testAvgWithValidRangeWithNullCF() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testAvgWithValidRangeWithNullCF() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
         new LongColumnInterpreter();
@@ -689,8 +690,8 @@ public class TestAggregateProtocol {
   }
 
   @Test (timeout=300000)
-  public void testAvgWithInvalidRange() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testAvgWithInvalidRange() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
@@ -707,7 +708,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testAvgWithFilter() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
@@ -727,7 +728,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testStdWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
@@ -742,7 +743,7 @@ public class TestAggregateProtocol {
    */
   @Test (timeout=300000)
   public void testStdWithValidRange2() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
@@ -755,7 +756,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testStdWithValidRangeWithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
@@ -767,7 +768,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testStdWithValidRange2WithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -779,8 +780,8 @@ public class TestAggregateProtocol {
   }
 
   @Test (timeout=300000)
-  public void testStdWithValidRangeWithNullCF() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testStdWithValidRangeWithNullCF() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[17]);
@@ -796,8 +797,8 @@ public class TestAggregateProtocol {
   }
 
   @Test (timeout=300000)
-  public void testStdWithInvalidRange() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testStdWithInvalidRange() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -814,7 +815,7 @@ public class TestAggregateProtocol {
 
   @Test (timeout=300000)
   public void testStdWithFilter() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);

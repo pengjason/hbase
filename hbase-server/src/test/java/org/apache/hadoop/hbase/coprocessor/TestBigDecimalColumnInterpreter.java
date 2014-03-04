@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
 import java.math.BigDecimal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -129,7 +131,7 @@ public class TestBigDecimalColumnInterpreter {
    */
   @Test (timeout=300000)
   public void testMedianWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
@@ -148,7 +150,7 @@ public class TestBigDecimalColumnInterpreter {
    */
   @Test (timeout=300000)
   public void testMaxWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
@@ -162,7 +164,7 @@ public class TestBigDecimalColumnInterpreter {
    */
   @Test (timeout=300000)
   public void testMaxWithValidRange2() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
@@ -175,7 +177,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testMaxWithValidRangeWithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
@@ -186,7 +188,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testMaxWithValidRange2WithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -198,8 +200,8 @@ public class TestBigDecimalColumnInterpreter {
   }
 
   @Test (timeout=300000)
-  public void testMaxWithValidRangeWithNullCF() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testMaxWithValidRangeWithNullCF() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
 	    new BigDecimalColumnInterpreter();
     Scan scan = new Scan();
@@ -214,8 +216,8 @@ public class TestBigDecimalColumnInterpreter {
   }
 
   @Test (timeout=300000)
-  public void testMaxWithInvalidRange() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testMaxWithInvalidRange() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
 	    new BigDecimalColumnInterpreter();
     Scan scan = new Scan();
@@ -240,7 +242,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[4]);
     scan.setStopRow(ROWS[4]);
     try {
-      AggregationClient aClient = new AggregationClient(conf);
+      AggregationClient aClient = new AggregationClient(util.getConnection());
       final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
 	      new BigDecimalColumnInterpreter();
       max = aClient.max(TEST_TABLE, ci, scan);
@@ -253,7 +255,7 @@ public class TestBigDecimalColumnInterpreter {
   @Test (timeout=300000)
   public void testMaxWithFilter() throws Throwable {
     BigDecimal max = BigDecimal.ZERO;
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
@@ -273,7 +275,7 @@ public class TestBigDecimalColumnInterpreter {
    */
   @Test (timeout=300000)
   public void testMinWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(HConstants.EMPTY_START_ROW);
@@ -289,7 +291,7 @@ public class TestBigDecimalColumnInterpreter {
    */
   @Test (timeout=300000)
   public void testMinWithValidRange2() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
@@ -302,7 +304,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testMinWithValidRangeWithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(HConstants.EMPTY_START_ROW);
@@ -315,7 +317,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testMinWithValidRange2WithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -327,8 +329,8 @@ public class TestBigDecimalColumnInterpreter {
   }
 
   @Test (timeout=300000)
-  public void testMinWithValidRangeWithNullCF() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testMinWithValidRangeWithNullCF() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
@@ -344,8 +346,8 @@ public class TestBigDecimalColumnInterpreter {
   }
 
   @Test (timeout=300000)
-  public void testMinWithInvalidRange() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testMinWithInvalidRange() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     BigDecimal min = null;
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
@@ -361,8 +363,8 @@ public class TestBigDecimalColumnInterpreter {
   }
 
   @Test (timeout=300000)
-  public void testMinWithInvalidRange2() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testMinWithInvalidRange2() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -379,7 +381,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testMinWithFilter() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
@@ -399,7 +401,7 @@ public class TestBigDecimalColumnInterpreter {
    */
   @Test (timeout=300000)
   public void testSumWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
@@ -413,7 +415,7 @@ public class TestBigDecimalColumnInterpreter {
    */
   @Test (timeout=300000)
   public void testSumWithValidRange2() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
@@ -426,7 +428,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testSumWithValidRangeWithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
@@ -437,7 +439,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testSumWithValidRange2WithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -449,8 +451,8 @@ public class TestBigDecimalColumnInterpreter {
   }
 
   @Test (timeout=300000)
-  public void testSumWithValidRangeWithNullCF() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testSumWithValidRangeWithNullCF() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
@@ -466,8 +468,8 @@ public class TestBigDecimalColumnInterpreter {
   }
 
   @Test (timeout=300000)
-  public void testSumWithInvalidRange() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testSumWithInvalidRange() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -484,7 +486,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testSumWithFilter() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
@@ -504,7 +506,7 @@ public class TestBigDecimalColumnInterpreter {
    */
   @Test (timeout=300000)
   public void testAvgWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
@@ -518,7 +520,7 @@ public class TestBigDecimalColumnInterpreter {
    */
   @Test (timeout=300000)
   public void testAvgWithValidRange2() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
@@ -531,7 +533,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testAvgWithValidRangeWithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
@@ -542,7 +544,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testAvgWithValidRange2WithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -554,8 +556,8 @@ public class TestBigDecimalColumnInterpreter {
   }
 
   @Test (timeout=300000)
-  public void testAvgWithValidRangeWithNullCF() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testAvgWithValidRangeWithNullCF() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
 	    new BigDecimalColumnInterpreter();
@@ -569,8 +571,8 @@ public class TestBigDecimalColumnInterpreter {
   }
 
   @Test (timeout=300000)
-  public void testAvgWithInvalidRange() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testAvgWithInvalidRange() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
@@ -587,7 +589,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testAvgWithFilter() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
@@ -607,7 +609,7 @@ public class TestBigDecimalColumnInterpreter {
    */
   @Test (timeout=300000)
   public void testStdWithValidRange() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
@@ -622,7 +624,7 @@ public class TestBigDecimalColumnInterpreter {
    */
   @Test (timeout=300000)
   public void testStdWithValidRange2() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
@@ -639,7 +641,7 @@ public class TestBigDecimalColumnInterpreter {
    */
   @Test (timeout=300000)
   public void testStdWithValidRangeWithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
@@ -650,7 +652,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testStdWithValidRange2WithNoCQ() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -663,8 +665,8 @@ public class TestBigDecimalColumnInterpreter {
   }
 
   @Test (timeout=300000)
-  public void testStdWithValidRangeWithNullCF() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testStdWithValidRangeWithNullCF() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[17]);
@@ -680,8 +682,8 @@ public class TestBigDecimalColumnInterpreter {
   }
 
   @Test
-  public void testStdWithInvalidRange() {
-    AggregationClient aClient = new AggregationClient(conf);
+  public void testStdWithInvalidRange() throws IOException {
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
@@ -698,7 +700,7 @@ public class TestBigDecimalColumnInterpreter {
 
   @Test (timeout=300000)
   public void testStdWithFilter() throws Throwable {
-    AggregationClient aClient = new AggregationClient(conf);
+    AggregationClient aClient = new AggregationClient(util.getConnection());
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);

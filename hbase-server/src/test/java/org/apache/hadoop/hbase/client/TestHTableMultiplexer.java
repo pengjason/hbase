@@ -72,7 +72,7 @@ public class TestHTableMultiplexer {
     List<Put> failedPuts;
     boolean success;
     
-    HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConfiguration(), 
+    HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConnection(),
         PER_REGIONSERVER_QUEUE_SIZE);
 
     HTable ht = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY }, VERSION,

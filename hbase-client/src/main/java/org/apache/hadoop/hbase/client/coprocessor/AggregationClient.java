@@ -32,11 +32,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -76,14 +77,13 @@ import com.google.protobuf.Message;
 public class AggregationClient {
 
   private static final Log log = LogFactory.getLog(AggregationClient.class);
-  Configuration conf;
+  HConnection conn;
 
   /**
    * Constructor with Conf object
-   * @param cfg
    */
-  public AggregationClient(Configuration cfg) {
-    this.conf = cfg;
+  public AggregationClient(HConnection conn) {
+    this.conn = conn;
   }
 
   /**
@@ -101,9 +101,9 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message> R max(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    HTable table = null;
+    HTableInterface table = null;
     try {
-      table = new HTable(conf, tableName);
+      table = conn.getTable(tableName);
       return max(table, ci, scan);
     } finally {
       if (table != null) {
@@ -125,7 +125,7 @@ public class AggregationClient {
    *           & propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> 
-  R max(final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci,
+  R max(final HTableInterface table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class MaxCallBack implements Batch.Callback<R> {
@@ -196,9 +196,9 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message> R min(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    HTable table = null;
+    HTableInterface table = null;
     try {
-      table = new HTable(conf, tableName);
+      table = conn.getTable(tableName);
       return min(table, ci, scan);
     } finally {
       if (table != null) {
@@ -218,7 +218,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> 
-  R min(final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci,
+  R min(final HTableInterface table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class MinCallBack implements Batch.Callback<R> {
@@ -276,9 +276,9 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message> long rowCount(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    HTable table = null;
+    HTableInterface table = null;
     try {
-      table = new HTable(conf, tableName);
+      table = conn.getTable(tableName);
       return rowCount(table, ci, scan);
     } finally {
       if (table != null) {
@@ -301,7 +301,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> 
-  long rowCount(final HTable table,
+  long rowCount(final HTableInterface table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, true);
     class RowNumCallback implements Batch.Callback<Long> {
@@ -350,9 +350,9 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message> S sum(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    HTable table = null;
+    HTableInterface table = null;
     try {
-      table = new HTable(conf, tableName);
+      table = conn.getTable(tableName);
       return sum(table, ci, scan);
     } finally {
       if (table != null) {
@@ -371,7 +371,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> 
-  S sum(final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci,
+  S sum(final HTableInterface table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     
@@ -423,9 +423,9 @@ public class AggregationClient {
   private <R, S, P extends Message, Q extends Message, T extends Message> Pair<S, Long> getAvgArgs(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    HTable table = null;
+    HTableInterface table = null;
     try {
-      table = new HTable(conf, tableName);
+      table = conn.getTable(tableName);
       return getAvgArgs(table, ci, scan);
     } finally {
       if (table != null) {
@@ -443,7 +443,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   private <R, S, P extends Message, Q extends Message, T extends Message>
-  Pair<S, Long> getAvgArgs(final HTable table,
+  Pair<S, Long> getAvgArgs(final HTableInterface table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class AvgCallBack implements Batch.Callback<Pair<S, Long>> {
@@ -540,7 +540,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   private <R, S, P extends Message, Q extends Message, T extends Message>
-  Pair<List<S>, Long> getStdArgs(final HTable table,
+  Pair<List<S>, Long> getStdArgs(final HTableInterface table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class StdCallback implements Batch.Callback<Pair<List<S>, Long>> {
@@ -614,9 +614,9 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message>
   double std(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
-    HTable table = null;
+    HTableInterface table = null;
     try {
-      table = new HTable(conf, tableName);
+      table = conn.getTable(tableName);
       return std(table, ci, scan);
     } finally {
       if (table != null) {
@@ -638,7 +638,8 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> double std(
-      final HTable table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
+      final HTableInterface table,
+      ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
     Pair<List<S>, Long> p = getStdArgs(table, ci, scan);
     double res = 0d;
     double avg = ci.divideForAvg(p.getFirst().get(0), p.getSecond());
@@ -662,7 +663,7 @@ public class AggregationClient {
    */
   private <R, S, P extends Message, Q extends Message, T extends Message>
   Pair<NavigableMap<byte[], List<S>>, List<S>>
-  getMedianArgs(final HTable table,
+  getMedianArgs(final HTableInterface table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     final NavigableMap<byte[], List<S>> map =
@@ -727,9 +728,9 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message>
   R median(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
-    HTable table = null;
+    HTableInterface table = null;
     try {
-      table = new HTable(conf, tableName);
+      table = conn.getTable(tableName);
       return median(table, ci, scan);
     } finally {
       if (table != null) {
@@ -749,7 +750,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  R median(final HTable table, ColumnInterpreter<R, S, P, Q, T> ci,
+  R median(final HTableInterface table, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
     Pair<NavigableMap<byte[], List<S>>, List<S>> p = getMedianArgs(table, ci, scan);
     byte[] startRow = null;

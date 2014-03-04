@@ -128,16 +128,19 @@ public class MetaScanner {
       final byte[] row, final int rowLimit, final TableName metaTableName)
     throws IOException {
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
-    HTable metaTable;
-    if (connection == null) {
-      metaTable = new HTable(configuration, TableName.META_TABLE_NAME, null);
-    } else {
-      metaTable = new HTable(TableName.META_TABLE_NAME, connection, null);
-    }
+    HTable metaTable = null;
+    boolean manageConnection = false;
+
     // Calculate startrow for scan.
     byte[] startRow;
     ResultScanner scanner = null;
     try {
+      if (connection == null) {
+        manageConnection = true;
+        connection = (ClusterConnection) HConnectionManager.createConnection(configuration);
+      }
+      metaTable = (HTable) connection.getTable(TableName.META_TABLE_NAME);
+
       if (row != null) {
         // Scan starting at a particular row in a particular table
         byte[] searchRow = HRegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
@@ -208,6 +211,14 @@ public class MetaScanner {
         } catch (Throwable t) {
           ExceptionUtil.rethrowIfInterrupt(t);
           LOG.debug("Got exception in closing the meta table", t);
+        }
+      }
+      if (manageConnection && connection != null) {
+        try {
+          connection.close();
+        } catch (Throwable t) {
+          ExceptionUtil.rethrowIfInterrupt(t);
+          LOG.debug("Got exception in closing the managed connection", t);
         }
       }
     }

@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -165,9 +167,9 @@ public class MetaReader {
   throws IOException {
     // Passing the CatalogTracker's connection ensures this
     // HTable instance uses the CatalogTracker's connection.
-    org.apache.hadoop.hbase.client.HConnection c = catalogTracker.getConnection();
+    HConnection c = catalogTracker.getConnection();
     if (c == null) throw new NullPointerException("No connection");
-    return new HTable(tableName, c);
+    return (HTable) c.getTable(tableName);
   }
 
   /**
@@ -604,11 +606,15 @@ public class MetaReader {
    * @throws IOException
    */
   public static int getRegionCount(final Configuration c, final String tableName) throws IOException {
-    HTable t = new HTable(c, tableName);
+    HConnection conn = null;
+    HTable t = null;
     try {
+      conn = HConnectionManager.createConnection(c);
+      t = (HTable) conn.getTable(tableName);
       return t.getRegionLocations().size();
     } finally {
-      t.close();
+      if (t != null) t.close();
+      if (conn != null) conn.close();
     }
   }
 }
