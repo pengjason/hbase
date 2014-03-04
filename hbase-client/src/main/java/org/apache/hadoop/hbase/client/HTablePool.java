@@ -65,6 +65,7 @@ import com.google.protobuf.ServiceException;
  * @deprecated Use {@link HConnection#getTable(String)} instead.
  */
 @InterfaceAudience.Private
+@Deprecated
 public class HTablePool implements Closeable {
   private final PoolMap<String, HTableInterface> tables;
   private final int maxSize;
