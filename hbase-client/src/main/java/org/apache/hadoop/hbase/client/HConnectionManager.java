@@ -186,7 +186,10 @@ public class HConnectionManager {
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
+   * @deprecated Connections are no longer cached. Manage connection lifecycle explicitly
+   * using {@link #createConnection(Configuration)} and friends.
    */
+  @Deprecated
   public static HConnection getConnection(final Configuration conf) throws IOException {
     return ConnectionManager.getConnectionInternal(conf);
   }

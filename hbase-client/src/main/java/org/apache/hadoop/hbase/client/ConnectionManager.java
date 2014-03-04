@@ -117,8 +117,10 @@ class ConnectionManager {
   // An LRU Map of HConnectionKey -> HConnection (TableServer).  All
   // access must be synchronized.  This map is not private because tests
   // need to be able to tinker with it.
+  @Deprecated
   static final Map<HConnectionKey, HConnectionImplementation> CONNECTION_INSTANCES;
 
+  @Deprecated
   public static final int MAX_CACHED_CONNECTION_INSTANCES;
 
   /**
@@ -194,7 +196,7 @@ class ConnectionManager {
     return getConnectionInternal(conf);
   }
 
-
+  @Deprecated
   static ClusterConnection getConnectionInternal(final Configuration conf)
     throws IOException {
     boolean warnOnCacheHit = conf.getBoolean(WARN_ON_CACHE_HIT_KEY, false);
@@ -242,6 +244,7 @@ class ConnectionManager {
     return createConnectionInternal(conf);
   }
 
+  @Deprecated
   static ClusterConnection createConnectionInternal(Configuration conf) throws IOException {
     UserProvider provider = UserProvider.instantiate(conf);
     return createConnection(conf, false, null, provider.getCurrent());
@@ -478,7 +481,6 @@ class ConnectionManager {
    * @return the value returned by the connect method
    * @throws IOException
    */
-  @InterfaceAudience.Private
   public static <T> T execute(HConnectable<T> connectable) throws IOException {
     if (connectable == null || connectable.conf == null) {
       return null;
