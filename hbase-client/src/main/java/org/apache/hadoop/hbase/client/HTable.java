@@ -150,7 +150,9 @@ public class HTable implements HTableInterface {
    * @param conf Configuration object to use.
    * @param tableName Name of the table.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated See {@link HConnection#getTable(String)}.
    */
+  @Deprecated
   public HTable(Configuration conf, final String tableName)
   throws IOException {
     this(conf, TableName.valueOf(tableName));
@@ -165,7 +167,9 @@ public class HTable implements HTableInterface {
    * @param conf Configuration object to use.
    * @param tableName Name of the table.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated See {@link HConnection#getTable(byte[])}.
    */
+  @Deprecated
   public HTable(Configuration conf, final byte[] tableName)
   throws IOException {
     this(conf, TableName.valueOf(tableName));
@@ -182,7 +186,9 @@ public class HTable implements HTableInterface {
    * @param conf Configuration object to use.
    * @param tableName table name pojo
    * @throws IOException if a remote or network exception occurs
+   * @deprecated See {@link HConnection#getTable(TableName)}.
    */
+  @Deprecated
   public HTable(Configuration conf, final TableName tableName)
   throws IOException {
     this.tableName = tableName;
@@ -205,7 +211,7 @@ public class HTable implements HTableInterface {
    * @param tableName Name of the table.
    * @param connection HConnection to be used.
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Do not use.
+   * @deprecated See {@link HConnection#getTable(TableName)}.
    */
   @Deprecated
   public HTable(TableName tableName, HConnection connection) throws IOException {
@@ -247,7 +253,9 @@ public class HTable implements HTableInterface {
    * @param tableName Name of the table.
    * @param pool ExecutorService to be used.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated See {@link HConnection#getTable(byte[], ExecutorService)}.
    */
+  @Deprecated
   public HTable(Configuration conf, final byte[] tableName, final ExecutorService pool)
       throws IOException {
     this(conf, TableName.valueOf(tableName), pool);
@@ -264,7 +272,9 @@ public class HTable implements HTableInterface {
    * @param tableName Name of the table.
    * @param pool ExecutorService to be used.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated See {@link HConnection#getTable(TableName, ExecutorService)}.
    */
+  @Deprecated
   public HTable(Configuration conf, final TableName tableName, final ExecutorService pool)
       throws IOException {
     this.connection = ConnectionManager.getConnectionInternal(conf);
@@ -299,15 +309,15 @@ public class HTable implements HTableInterface {
   @Deprecated
   public HTable(TableName tableName, final HConnection connection,
       final ExecutorService pool) throws IOException {
-    this(tableName, (ClusterConnection)connection, pool);
+    this(tableName, (ClusterConnection) connection, pool);
   }
 
   /**
    * Creates an object to access a HBase table.
    * Shares zookeeper connection and other resources with other HTable instances
    * created with the same <code>connection</code> instance.
-   * Visible only for HTableWrapper which is in different package.
-   * Should not be used by exernal code.
+   * Visible only for HTableWrapper which is in different package. Should not be used by
+   * exernal code. See {@link HConnection#getTable(TableName, ExecutorService)} instead.
    * @param tableName Name of the table.
    * @param connection HConnection to be used.
    * @param pool ExecutorService to be used.
@@ -331,6 +341,7 @@ public class HTable implements HTableInterface {
   /**
    * For internal testing.
    */
+  @VisibleForTesting
   protected HTable() {
     tableName = null;
     cleanupPoolOnClose = false;
