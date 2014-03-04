@@ -105,6 +105,12 @@ import com.google.protobuf.ServiceException;
 class ConnectionManager {
   static final Log LOG = LogFactory.getLog(ConnectionManager.class);
 
+  /**
+   * Enable warn logging on cache hit within {@link ConnectionManager#CONNECTION_INSTANCES}. Use
+   * to detect dependency on deprecated semantics.
+   */
+  public static final String WARN_ON_CACHE_HIT_KEY = "hbase.client.connectionmanager.warnoncachehit";
+
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
   private static final String CLIENT_NONCES_ENABLED_KEY = "hbase.client.nonces.enabled";
 
@@ -191,6 +197,7 @@ class ConnectionManager {
 
   static ClusterConnection getConnectionInternal(final Configuration conf)
     throws IOException {
+    boolean warnOnCacheHit = conf.getBoolean(WARN_ON_CACHE_HIT_KEY, false);
     HConnectionKey connectionKey = new HConnectionKey(conf);
     synchronized (CONNECTION_INSTANCES) {
       HConnectionImplementation connection = CONNECTION_INSTANCES.get(connectionKey);
@@ -201,6 +208,10 @@ class ConnectionManager {
         ConnectionManager.deleteConnection(connectionKey, true);
         connection = (HConnectionImplementation)createConnection(conf, true);
         CONNECTION_INSTANCES.put(connectionKey, connection);
+      }
+      if (warnOnCacheHit && !connection.isZeroReference()) {
+        Exception e = new Exception();
+        LOG.warn("Connection caching is deprecated. See HBASE-9117 for details.", e);
       }
       connection.incCount();
       return connection;
