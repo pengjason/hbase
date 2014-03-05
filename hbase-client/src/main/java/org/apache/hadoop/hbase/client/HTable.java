@@ -144,177 +144,6 @@ public class HTable implements HTableInterface {
   /**
    * Creates an object to access a HBase table.
    * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>conf</code> instance.  Uses already-populated
-   * region cache if one is available, populated by any other HTable instances
-   * sharing this <code>conf</code> instance.  Recommended.
-   * @param conf Configuration object to use.
-   * @param tableName Name of the table.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated See {@link HConnection#getTable(String)}.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final String tableName)
-  throws IOException {
-    this(conf, TableName.valueOf(tableName));
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>conf</code> instance.  Uses already-populated
-   * region cache if one is available, populated by any other HTable instances
-   * sharing this <code>conf</code> instance.  Recommended.
-   * @param conf Configuration object to use.
-   * @param tableName Name of the table.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated See {@link HConnection#getTable(byte[])}.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final byte[] tableName)
-  throws IOException {
-    this(conf, TableName.valueOf(tableName));
-  }
-
-
-
-  /**
-   * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>conf</code> instance.  Uses already-populated
-   * region cache if one is available, populated by any other HTable instances
-   * sharing this <code>conf</code> instance.  Recommended.
-   * @param conf Configuration object to use.
-   * @param tableName table name pojo
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated See {@link HConnection#getTable(TableName)}.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final TableName tableName)
-  throws IOException {
-    this.tableName = tableName;
-    this.cleanupPoolOnClose = this.cleanupConnectionOnClose = true;
-    if (conf == null) {
-      this.connection = null;
-      return;
-    }
-    this.connection = (ClusterConnection) ConnectionManager.createConnection(conf);
-    this.configuration = conf;
-
-    this.pool = getDefaultExecutor(conf);
-    this.finishSetup();
-  }
-
-  /**
-   * Creates an object to access a HBase table. Shares zookeeper connection and other resources with
-   * other HTable instances created with the same <code>connection</code> instance. Use this
-   * constructor when the HConnection instance is externally managed.
-   * @param tableName Name of the table.
-   * @param connection HConnection to be used.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated See {@link HConnection#getTable(TableName)}.
-   */
-  @Deprecated
-  public HTable(TableName tableName, HConnection connection) throws IOException {
-    this.tableName = tableName;
-    this.cleanupPoolOnClose = true;
-    this.cleanupConnectionOnClose = false;
-    this.connection = (ClusterConnection)connection;
-    this.configuration = connection.getConfiguration();
-
-    this.pool = getDefaultExecutor(this.configuration);
-    this.finishSetup();
-  }
-
-  public static ThreadPoolExecutor getDefaultExecutor(Configuration conf) {
-    int maxThreads = conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE);
-    if (maxThreads == 0) {
-      maxThreads = 1; // is there a better default?
-    }
-    long keepAliveTime = conf.getLong("hbase.htable.threads.keepalivetime", 60);
-
-    // Using the "direct handoff" approach, new threads will only be created
-    // if it is necessary and will grow unbounded. This could be bad but in HCM
-    // we only create as many Runnables as there are region servers. It means
-    // it also scales when new region servers are added.
-    ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("htable"));
-    ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
-    return pool;
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>conf</code> instance.  Uses already-populated
-   * region cache if one is available, populated by any other HTable instances
-   * sharing this <code>conf</code> instance.
-   * Use this constructor when the ExecutorService is externally managed.
-   * @param conf Configuration object to use.
-   * @param tableName Name of the table.
-   * @param pool ExecutorService to be used.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated See {@link HConnection#getTable(byte[], ExecutorService)}.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final byte[] tableName, final ExecutorService pool)
-      throws IOException {
-    this(conf, TableName.valueOf(tableName), pool);
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>conf</code> instance.  Uses already-populated
-   * region cache if one is available, populated by any other HTable instances
-   * sharing this <code>conf</code> instance.
-   * Use this constructor when the ExecutorService is externally managed.
-   * @param conf Configuration object to use.
-   * @param tableName Name of the table.
-   * @param pool ExecutorService to be used.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated See {@link HConnection#getTable(TableName, ExecutorService)}.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final TableName tableName, final ExecutorService pool)
-      throws IOException {
-    this.connection = (ClusterConnection) ConnectionManager.createConnection(conf);
-    this.configuration = conf;
-    this.pool = pool;
-    this.tableName = tableName;
-    this.cleanupPoolOnClose = false;
-    this.cleanupConnectionOnClose = true;
-
-    this.finishSetup();
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>connection</code> instance.
-   * Use this constructor when the ExecutorService and HConnection instance are
-   * externally managed.
-   * @param tableName Name of the table.
-   * @param connection HConnection to be used.
-   * @param pool ExecutorService to be used.
-   * @throws IOException if a remote or network exception occurs.
-   * @deprecated Do not use, internal ctor.
-   */
-  @Deprecated
-  public HTable(final byte[] tableName, final HConnection connection,
-      final ExecutorService pool) throws IOException {
-    this(TableName.valueOf(tableName), connection, pool);
-  }
-
-  /** @deprecated Do not use, internal ctor. */
-  @Deprecated
-  public HTable(TableName tableName, final HConnection connection,
-      final ExecutorService pool) throws IOException {
-    this(tableName, (ClusterConnection) connection, pool);
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
    * created with the same <code>connection</code> instance.
    * Visible only for HTableWrapper which is in different package. Should not be used by
    * exernal code. See {@link HConnection#getTable(TableName, ExecutorService)} instead.
@@ -324,7 +153,7 @@ public class HTable implements HTableInterface {
    * @throws IOException if a remote or network exception occurs
    */
   @InterfaceAudience.Private
-  public HTable(TableName tableName, final ClusterConnection connection,
+  protected HTable(TableName tableName, final ClusterConnection connection,
       final ExecutorService pool) throws IOException {
     if (connection == null || connection.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
@@ -521,19 +350,6 @@ public class HTable implements HTableInterface {
   @Override
   public TableName getName() {
     return tableName;
-  }
-
-  /**
-   * <em>INTERNAL</em> Used by unit tests and tools to do low-level
-   * manipulations.
-   * @return An HConnection instance.
-   * @deprecated This method will be changed from public to package protected.
-   */
-  // TODO(tsuna): Remove this.  Unit tests shouldn't require public helpers.
-  @Deprecated
-  @VisibleForTesting
-  public HConnection getConnection() {
-    return this.connection;
   }
 
   /**
