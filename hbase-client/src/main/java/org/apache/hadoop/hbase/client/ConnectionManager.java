@@ -23,11 +23,8 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -38,7 +35,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -49,10 +45,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -106,23 +100,8 @@ import com.google.protobuf.ServiceException;
 class ConnectionManager {
   static final Log LOG = LogFactory.getLog(ConnectionManager.class);
 
-  /**
-   * Enable warn logging on cache hit within {@link ConnectionManager#CONNECTION_INSTANCES}. Use
-   * to detect dependency on deprecated semantics.
-   */
-  public static final String WARN_ON_CACHE_HIT_KEY = "hbase.client.connectionmanager.warnoncachehit";
-
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
   private static final String CLIENT_NONCES_ENABLED_KEY = "hbase.client.nonces.enabled";
-
-  // An LRU Map of HConnectionKey -> HConnection (TableServer).  All
-  // access must be synchronized.  This map is not private because tests
-  // need to be able to tinker with it.
-  @Deprecated
-  static final Map<HConnectionKey, HConnectionImplementation> CONNECTION_INSTANCES;
-
-  @Deprecated
-  public static final int MAX_CACHED_CONNECTION_INSTANCES;
 
   /**
    * Global nonceGenerator shared per client.Currently there's no reason to limit its scope.
@@ -131,23 +110,6 @@ class ConnectionManager {
   private static volatile NonceGenerator nonceGenerator = null;
   /** The nonce generator lock. Only taken when creating HConnection, which gets a private copy. */
   private static Object nonceGeneratorCreateLock = new Object();
-
-  static {
-    // We set instances to one more than the value specified for {@link
-    // HConstants#ZOOKEEPER_MAX_CLIENT_CNXNS}. By default, the zk default max
-    // connections to the ensemble from the one client is 30, so in that case we
-    // should run into zk issues before the LRU hit this value of 31.
-    MAX_CACHED_CONNECTION_INSTANCES = HBaseConfiguration.create().getInt(
-      HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS, HConstants.DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS) + 1;
-    CONNECTION_INSTANCES = new LinkedHashMap<HConnectionKey, HConnectionImplementation>(
-        (int) (MAX_CACHED_CONNECTION_INSTANCES / 0.75F) + 1, 0.75F, true) {
-      @Override
-      protected boolean removeEldestEntry(
-          Map.Entry<HConnectionKey, HConnectionImplementation> eldest) {
-         return size() > MAX_CACHED_CONNECTION_INSTANCES;
-       }
-    };
-  }
 
   /** Dummy nonce generator for disabled nonces. */
   static class NoNonceGenerator implements NonceGenerator {
@@ -184,160 +146,43 @@ class ConnectionManager {
   }
 
   /**
-   * Get the connection that goes with the passed <code>conf</code> configuration instance.
-   * If no current connection exists, method creates a new connection and keys it using
-   * connection-specific properties from the passed {@link Configuration}; see
-   * {@link HConnectionKey}.
-   * @param conf configuration
-   * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
-   */
-  @Deprecated
-  public static HConnection getConnection(final Configuration conf) throws IOException {
-    return getConnectionInternal(conf);
-  }
-
-  @Deprecated
-  static ClusterConnection getConnectionInternal(final Configuration conf)
-    throws IOException {
-    boolean warnOnCacheHit = conf.getBoolean(WARN_ON_CACHE_HIT_KEY, false);
-    HConnectionKey connectionKey = new HConnectionKey(conf);
-    synchronized (CONNECTION_INSTANCES) {
-      HConnectionImplementation connection = CONNECTION_INSTANCES.get(connectionKey);
-      if (connection == null) {
-        connection = (HConnectionImplementation)createConnection(conf, true);
-        CONNECTION_INSTANCES.put(connectionKey, connection);
-      } else if (connection.isClosed()) {
-        ConnectionManager.deleteConnection(connectionKey, true);
-        connection = (HConnectionImplementation)createConnection(conf, true);
-        CONNECTION_INSTANCES.put(connectionKey, connection);
-      }
-      if (warnOnCacheHit && !connection.isZeroReference()) {
-        Exception e = new Exception();
-        LOG.warn("Connection caching is deprecated. See HBASE-9117 for details.", e);
-      }
-      connection.incCount();
-      return connection;
-    }
-  }
-
-  /**
    * Create a new HConnection instance using the passed <code>conf</code> instance.
-   * <p>Note: This bypasses the usual HConnection life cycle management done by
-   * {@link #getConnection(Configuration)}. The caller is responsible for
-   * calling {@link HConnection#close()} on the returned connection instance.
-   *
-   * This is the recommended way to create HConnections.
-   * {@code
-   * HConnection connection = ConnectionManagerInternal.createConnection(conf);
-   * HTableInterface table = connection.getTable("mytable");
-   * table.get(...);
-   * ...
-   * table.close();
-   * connection.close();
-   * }
-   *
-   * @param conf configuration
-   * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * <p>The caller is responsible for calling {@link HConnection#close()} on the
+   * returned connection instance.
    */
   public static HConnection createConnection(Configuration conf) throws IOException {
-    return createConnectionInternal(conf);
-  }
-
-  @Deprecated
-  static ClusterConnection createConnectionInternal(Configuration conf) throws IOException {
     UserProvider provider = UserProvider.instantiate(conf);
-    return createConnection(conf, false, null, provider.getCurrent());
+    return createConnection(conf, null, provider.getCurrent());
   }
 
   /**
    * Create a new HConnection instance using the passed <code>conf</code> instance.
-   * <p>Note: This bypasses the usual HConnection life cycle management done by
-   * {@link #getConnection(Configuration)}. The caller is responsible for
-   * calling {@link HConnection#close()} on the returned connection instance.
-   * This is the recommended way to create HConnections.
-   * {@code
-   * ExecutorService pool = ...;
-   * HConnection connection = HConnectionManager.createConnection(conf, pool);
-   * HTableInterface table = connection.getTable("mytable");
-   * table.get(...);
-   * ...
-   * table.close();
-   * connection.close();
-   * }
-   * @param conf configuration
-   * @param pool the thread pool to use for batch operation in HTables used via this HConnection
-   * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * <p>The caller is responsible for calling {@link HConnection#close()} on the
+   * returned connection instance. This is the recommended way to create HConnections.
    */
   public static HConnection createConnection(Configuration conf, ExecutorService pool)
   throws IOException {
     UserProvider provider = UserProvider.instantiate(conf);
-    return createConnection(conf, false, pool, provider.getCurrent());
+    return createConnection(conf, pool, provider.getCurrent());
   }
 
   /**
    * Create a new HConnection instance using the passed <code>conf</code> instance.
-   * <p>Note: This bypasses the usual HConnection life cycle management done by
-   * {@link #getConnection(Configuration)}. The caller is responsible for
-   * calling {@link HConnection#close()} on the returned connection instance.
-   * This is the recommended way to create HConnections.
-   * {@code
-   * ExecutorService pool = ...;
-   * HConnection connection = HConnectionManager.createConnection(conf, pool);
-   * HTableInterface table = connection.getTable("mytable");
-   * table.get(...);
-   * ...
-   * table.close();
-   * connection.close();
-   * }
-   * @param conf configuration
-   * @param user the user the connection is for
-   * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * <p>The caller is responsible for calling {@link HConnection#close()} on the
+   * returned connection instance. This is the recommended way to create HConnections.
    */
   public static HConnection createConnection(Configuration conf, User user)
   throws IOException {
-    return createConnection(conf, false, null, user);
+    return createConnection(conf, null, user);
   }
 
   /**
    * Create a new HConnection instance using the passed <code>conf</code> instance.
-   * <p>Note: This bypasses the usual HConnection life cycle management done by
-   * {@link #getConnection(Configuration)}. The caller is responsible for
-   * calling {@link HConnection#close()} on the returned connection instance.
-   * This is the recommended way to create HConnections.
-   * {@code
-   * ExecutorService pool = ...;
-   * HConnection connection = HConnectionManager.createConnection(conf, pool);
-   * HTableInterface table = connection.getTable("mytable");
-   * table.get(...);
-   * ...
-   * table.close();
-   * connection.close();
-   * }
-   * @param conf configuration
-   * @param pool the thread pool to use for batch operation in HTables used via this HConnection
-   * @param user the user the connection is for
-   * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * <p>The caller is responsible for calling {@link HConnection#close()} on the
+   * returned connection instance. This is the recommended way to create HConnections.
    */
-  public static HConnection createConnection(Configuration conf, ExecutorService pool, User user)
-  throws IOException {
-    return createConnection(conf, false, pool, user);
-  }
-
-  @Deprecated
-  static HConnection createConnection(final Configuration conf, final boolean managed)
-      throws IOException {
-    UserProvider provider = UserProvider.instantiate(conf);
-    return createConnection(conf, managed, null, provider.getCurrent());
-  }
-
-  @Deprecated
-  static ClusterConnection createConnection(final Configuration conf, final boolean managed,
-      final ExecutorService pool, final User user)
+  public static ClusterConnection createConnection(final Configuration conf,
+    final ExecutorService pool, final User user)
   throws IOException {
     String className = conf.get(HConnection.HBASE_CLIENT_CONNECTION_IMPL,
       HConnectionImplementation.class.getName());
@@ -350,91 +195,11 @@ class ConnectionManager {
     try {
       // Default HCM#HCI is not accessible; make it so before invoking.
       Constructor<?> constructor =
-        clazz.getDeclaredConstructor(Configuration.class,
-          boolean.class, ExecutorService.class, User.class);
+        clazz.getDeclaredConstructor(Configuration.class, ExecutorService.class, User.class);
       constructor.setAccessible(true);
-      return (ClusterConnection) constructor.newInstance(conf, managed, pool, user);
+      return (ClusterConnection) constructor.newInstance(conf, pool, user);
     } catch (Exception e) {
       throw new IOException(e);
-    }
-  }
-
-  /**
-   * Delete connection information for the instance specified by passed configuration.
-   * If there are no more references to the designated connection connection, this method will
-   * then close connection to the zookeeper ensemble and let go of all associated resources.
-   *
-   * @param conf configuration whose identity is used to find {@link HConnection} instance.
-   * @deprecated
-   */
-  public static void deleteConnection(Configuration conf) {
-    deleteConnection(new HConnectionKey(conf), false);
-  }
-
-  /**
-   * Cleanup a known stale connection.
-   * This will then close connection to the zookeeper ensemble and let go of all resources.
-   *
-   * @param connection
-   * @deprecated
-   */
-  public static void deleteStaleConnection(HConnection connection) {
-    deleteConnection(connection, true);
-  }
-
-  /**
-   * Delete information for all connections. Close or not the connection, depending on the
-   *  staleConnection boolean and the ref count. By default, you should use it with
-   *  staleConnection to true.
-   * @deprecated
-   */
-  public static void deleteAllConnections(boolean staleConnection) {
-    synchronized (CONNECTION_INSTANCES) {
-      Set<HConnectionKey> connectionKeys = new HashSet<HConnectionKey>();
-      connectionKeys.addAll(CONNECTION_INSTANCES.keySet());
-      for (HConnectionKey connectionKey : connectionKeys) {
-        deleteConnection(connectionKey, staleConnection);
-      }
-      CONNECTION_INSTANCES.clear();
-    }
-  }
-
-  /**
-   * Delete information for all connections..
-   * @deprecated kept for backward compatibility, but the behavior is broken. HBASE-8983
-   */
-  @Deprecated
-  public static void deleteAllConnections() {
-    deleteAllConnections(false);
-  }
-
-
-  @Deprecated
-  private static void deleteConnection(HConnection connection, boolean staleConnection) {
-    synchronized (CONNECTION_INSTANCES) {
-      for (Entry<HConnectionKey, HConnectionImplementation> e: CONNECTION_INSTANCES.entrySet()) {
-        if (e.getValue() == connection) {
-          deleteConnection(e.getKey(), staleConnection);
-          break;
-        }
-      }
-    }
-  }
-
-  @Deprecated
-  private static void deleteConnection(HConnectionKey connectionKey, boolean staleConnection) {
-    synchronized (CONNECTION_INSTANCES) {
-      HConnectionImplementation connection = CONNECTION_INSTANCES.get(connectionKey);
-      if (connection != null) {
-        connection.decCount();
-        if (connection.isZeroReference() || staleConnection) {
-          CONNECTION_INSTANCES.remove(connectionKey);
-          connection.internalClose();
-        }
-      } else {
-        LOG.error("Connection not found in the list, can't delete it "+
-          "(connection key=" + connectionKey + "). May be the key was modified?", new Exception());
-      }
     }
   }
 
@@ -487,7 +252,7 @@ class ConnectionManager {
       return null;
     }
     Configuration conf = connectable.conf;
-    HConnection connection = getConnection(conf);
+    HConnection connection = createConnection(conf);
     boolean connectSucceeded = false;
     try {
       T returnValue = connectable.connect(connection);
@@ -569,9 +334,6 @@ class ConnectionManager {
 
     private int refCount;
 
-    // indicates whether this connection's life cycle is managed (by us)
-    private boolean managed;
-
     private User user;
 
     /**
@@ -579,36 +341,15 @@ class ConnectionManager {
      */
      Registry registry;
 
-     HConnectionImplementation(Configuration conf, boolean managed) throws IOException {
-       this(conf, managed, null, null);
-     }
-
-    /**
-     * Creates an "unmanaged" instance.
-     * This will be the default behavior following HBASE-9117.
-     */
-    HConnectionImplementation(Configuration conf, ExecutorService pool, User user)
-        throws IOException {
-      this(conf, false, pool, user);
-    }
-
     /**
      * constructor
      * @param conf Configuration object
-     * @param managed If true, does not do full shutdown on close; i.e. cleanup of connection
-     * to zk and shutdown of all services; we just close down the resources this connection was
-     * responsible for and decrement usage counters.  It is up to the caller to do the full
-     * cleanup.  It is set when we want have connection sharing going on -- reuse of zk connection,
-     * and cached region locations, established regionserver connections, etc.  When connections
-     * are shared, we have reference counting going on and will only do full cleanup when no more
-     * users of an HConnectionImplementation instance.
      */
-    HConnectionImplementation(Configuration conf, boolean managed,
-        ExecutorService pool, User user) throws IOException {
+    HConnectionImplementation(Configuration conf, ExecutorService pool, User user)
+        throws IOException {
       this(conf);
       this.user = user;
       this.batchPool = pool;
-      this.managed = managed;
       this.registry = setupRegistry();
       retrieveClusterId();
 
@@ -695,9 +436,6 @@ class ConnectionManager {
 
     @Override
     public HTableInterface getTable(TableName tableName, ExecutorService pool) throws IOException {
-      if (managed) {
-        throw new IOException("The connection has to be unmanaged.");
-      }
       return new HTable(tableName, this, pool);
     }
 
@@ -2451,7 +2189,8 @@ class ConnectionManager {
       return refCount == 0;
     }
 
-    void internalClose() {
+    @Override
+    public void close() {
       if (this.closed) {
         return;
       }
@@ -2463,19 +2202,6 @@ class ConnectionManager {
       this.stubs.clear();
       if (clusterStatusListener != null) {
         clusterStatusListener.close();
-      }
-    }
-
-    @Override
-    public void close() {
-      if (managed) {
-        if (aborted) {
-          ConnectionManager.deleteStaleConnection(this);
-        } else {
-          ConnectionManager.deleteConnection(this, false);
-        }
-      } else {
-        internalClose();
       }
     }
 
