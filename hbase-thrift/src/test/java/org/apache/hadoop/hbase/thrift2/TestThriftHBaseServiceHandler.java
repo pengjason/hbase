@@ -149,7 +149,7 @@ public class TestThriftHBaseServiceHandler {
 
   }
 
-  private ThriftHBaseServiceHandler createHandler() {
+  private ThriftHBaseServiceHandler createHandler() throws TIOError {
     return new ThriftHBaseServiceHandler(UTIL.getConfiguration());
   }
 

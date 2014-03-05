@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
+import org.apache.hadoop.hbase.thrift2.generated.TIOError;
 import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
@@ -179,7 +180,7 @@ public void setup() throws Exception {
 
 }
 
-private ThriftHBaseServiceHandler createHandler() {
+private ThriftHBaseServiceHandler createHandler() throws TIOError {
   return new ThriftHBaseServiceHandler(UTIL.getConfiguration());
 }
 
