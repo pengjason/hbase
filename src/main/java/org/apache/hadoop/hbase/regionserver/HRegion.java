@@ -4894,6 +4894,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public Result get(final Get get, final Integer lockid) throws IOException {
+    long startTime = System.nanoTime(), endTime;
     checkRow(get.getRow(), "Get");
     // Verify families are all valid
     if (get.hasFamilies()) {
@@ -4906,7 +4907,12 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
     List<KeyValue> results = get(get, true);
-    return new Result(results);
+    Result ret = new Result(results);
+    endTime = System.nanoTime();
+    if ((endTime - startTime) > 1e6) {
+      LOG.warn("get() took " + (endTime - startTime) / 1000 + " microS.");
+    }
+    return ret;
   }
 
   /*

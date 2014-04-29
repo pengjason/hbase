@@ -279,6 +279,7 @@ class WritableRpcEngine implements RpcEngine {
     public Writable call(Class<? extends VersionedProtocol> protocol,
         Writable param, long receivedTime, MonitoredRPCHandler status)
     throws IOException {
+      long n_startTime = System.nanoTime(), endTime;
       try {
         Invocation call = (Invocation)param;
         if(call.getMethodName() == null) {
@@ -363,6 +364,10 @@ class WritableRpcEngine implements RpcEngine {
               processingTime);
         }
 
+        endTime = System.nanoTime();
+        if ((endTime - n_startTime) > 1e6) {
+            LOG.warn("Call() took " + (endTime - n_startTime) / 1000 + " microS.");
+        }
         return retVal;
       } catch (InvocationTargetException e) {
         Throwable target = e.getTargetException();

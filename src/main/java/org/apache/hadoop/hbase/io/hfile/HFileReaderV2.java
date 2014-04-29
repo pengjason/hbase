@@ -271,6 +271,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       final boolean cacheBlock, boolean pread, final boolean isCompaction,
       BlockType expectedBlockType)
       throws IOException {
+    long startTime = System.nanoTime(), endTime;
     if (dataBlockIndexReader == null) {
       throw new IOException("Block index not loaded");
     }
@@ -328,6 +329,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
                   "has wrong encoding: " + cachedBlock.getDataBlockEncoding() +
                   " (expected: " + dataBlockEncoder.getEncodingInCache() + ")");
             }
+            endTime = System.nanoTime();
+            if ((endTime - startTime) > 1e6) {
+              LOG.warn("readBlock() (cache hit) took " + (endTime - startTime) / 1000 + " microS.");
+            }
             return cachedBlock;
           }
           // Carry on, please load.
@@ -363,6 +368,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
           HFile.dataBlockReadCnt.incrementAndGet();
         }
 
+        endTime = System.nanoTime();
+        if ((endTime - startTime) > 1e6) {
+          LOG.warn("readBlock() (cache miss) took " + (endTime - startTime) / 1000 + " microS.");
+        }
         return hfileBlock;
       }
     } finally {

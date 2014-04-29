@@ -2208,11 +2208,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   /** {@inheritDoc} */
   public Result get(byte[] regionName, Get get) throws IOException {
+    long startTime = System.nanoTime(), endTime;
     checkOpen();
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
-      return region.get(get, getLockFromId(get.getLockId()));
+      Result ret = region.get(get, getLockFromId(get.getLockId()));
+      endTime = System.nanoTime();
+      if ((endTime - startTime) > 1e6) {
+          LOG.warn("get() took " + (endTime - startTime) / 1000 + " microS.");
+      }
+      return ret;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }

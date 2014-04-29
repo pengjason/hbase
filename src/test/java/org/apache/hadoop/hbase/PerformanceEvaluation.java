@@ -864,7 +864,12 @@ public class PerformanceEvaluation {
       int lastRow = this.startRow + this.perClientRunRows;
       // Report on completion of 1/10th of total.
       for (int i = this.startRow; i < lastRow; i++) {
+        long startTime = System.nanoTime(), endTime;
         testRow(i);
+        endTime = System.nanoTime();
+        if ((endTime - startTime) > 1e6) {
+          LOG.warn("testRow() took " + (endTime - startTime) / 1000 + " microS.");
+        }
         if (status != null && i > 0 && (i % getReportingPeriod()) == 0) {
           status.setStatus(generateStatus(this.startRow, i, lastRow));
         }
