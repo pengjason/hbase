@@ -649,7 +649,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
         } finally {
           scope.close();
         }
-        latency.update((System.nanoTime() - startTime) / 1000);
+        long endTime = System.nanoTime();
+        latency.update((endTime - startTime) / 1000);
+        if ((endTime - startTime) > 1e6) {
+          LOG.warn("testRow() took " + (endTime - startTime) / 1000 + " microS.");
+        }
         if (status != null && i > 0 && (i % getReportingPeriod()) == 0) {
           status.setStatus(generateStatus(opts.startRow, i, lastRow));
         }

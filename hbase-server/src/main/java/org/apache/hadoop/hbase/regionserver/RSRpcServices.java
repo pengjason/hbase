@@ -1538,6 +1538,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public GetResponse get(final RpcController controller,
       final GetRequest request) throws ServiceException {
     long before = EnvironmentEdgeManager.currentTimeMillis();
+    long startTime = System.nanoTime(), endTime;
     try {
       checkOpen();
       requestCount.increment();
@@ -1580,7 +1581,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         ClientProtos.Result pbr = ProtobufUtil.toResult(r);
         builder.setResult(pbr);
       }
-      return builder.build();
+      GetResponse response = builder.build();
+      endTime = System.nanoTime();
+      if ((endTime - startTime) > 1e6) {
+        LOG.warn("get() took " + (endTime - startTime) / 1000 + " microS.");
+      }
+      return response;
     } catch (IOException ie) {
       throw new ServiceException(ie);
     } finally {
@@ -1601,6 +1607,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public MultiResponse multi(final RpcController rpcc, final MultiRequest request)
   throws ServiceException {
+    long startTime = System.nanoTime(), endTime;
     try {
       checkOpen();
     } catch (IOException ie) {
@@ -1652,7 +1659,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (cellsToReturn != null && !cellsToReturn.isEmpty() && controller != null) {
       controller.setCellScanner(CellUtil.createCellScanner(cellsToReturn));
     }
-    return responseBuilder.build();
+    MultiResponse response = responseBuilder.build();
+    endTime = System.nanoTime();
+    if ((endTime - startTime) > 1e6) {
+      LOG.warn("multi() took " + (endTime - startTime) / 1000 + "microS.");
+    }
+    return response;
   }
 
   /**

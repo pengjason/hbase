@@ -286,6 +286,7 @@ public class RpcServer implements RpcServerInterface {
     protected long size;                          // size of current call
     protected boolean isError;
     protected TraceInfo tinfo;
+    protected long startTime = System.nanoTime();
 
     Call(int id, final BlockingService service, final MethodDescriptor md, RequestHeader header,
          Message param, CellScanner cellScanner, Connection connection, Responder responder,
@@ -1091,6 +1092,10 @@ public class RpcServer implements RpcServerInterface {
       }
       if (doRegister) {
         enqueueInSelector(call);
+      }
+      long endTime = System.nanoTime();
+      if ((endTime - call.startTime) > 1e6) {
+        LOG.warn("Call() took " + (endTime - call.startTime) / 1000 + " microS.");
       }
     }
 

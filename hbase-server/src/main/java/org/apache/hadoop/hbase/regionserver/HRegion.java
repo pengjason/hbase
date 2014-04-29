@@ -4750,6 +4750,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException read exceptions
    */
   public Result get(final Get get) throws IOException {
+    long startTime = System.nanoTime(), endTime;
     checkRow(get.getRow(), "Get");
     // Verify families are all valid
     if (get.hasFamilies()) {
@@ -4762,7 +4763,12 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
     List<Cell> results = get(get, true);
-    return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null);
+    Result result = Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null);
+    endTime = System.nanoTime();
+    if ((endTime - startTime) > 1e6) {
+      LOG.warn("get() took " + (endTime - startTime) / 1000 + " microS.");
+    }
+    return result;
   }
 
   /*
