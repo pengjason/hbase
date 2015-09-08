@@ -130,6 +130,13 @@ public interface MetricsAssertHelper {
   void assertCounterLt(String name, long expected, BaseSource source);
 
   /**
+   * Assert that a counter does not exist.
+   * @param name   The name of the counter
+   * @param source The {@link BaseSource} that will provide the tags, gauges, and counters.
+   */
+  void assertCounterNotExist(String name, BaseSource source);
+
+  /**
    * Get the value of a counter.
    *
    * @param name   name of the counter.

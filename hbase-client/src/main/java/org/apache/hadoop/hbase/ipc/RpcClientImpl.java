@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.Message.Builder;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -944,7 +946,8 @@ public class RpcClientImpl extends AbstractRpcClient {
         checkIsOpen(); // Now we're checking that it didn't became idle in between.
 
         try {
-          IPCUtil.write(this.out, header, call.param, cellBlock);
+          call.callStats.setRequestSizeBytes(
+              IPCUtil.write(this.out, header, call.param, cellBlock));
         } catch (IOException e) {
           // We set the value inside the synchronized block, this way the next in line
           //  won't even try to write
@@ -993,12 +996,20 @@ public class RpcClientImpl extends AbstractRpcClient {
           int readSoFar = IPCUtil.getTotalSizeWhenWrittenDelimited(responseHeader);
           int whatIsLeftToRead = totalSize - readSoFar;
           IOUtils.skipFully(in, whatIsLeftToRead);
+          if (call != null) {
+            call.callStats.setResponseSizeBytes(totalSize);
+            call.callStats.setCallTimeMs(
+                EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
+          }
           return false;
         }
         if (responseHeader.hasException()) {
           ExceptionResponse exceptionResponse = responseHeader.getException();
           RemoteException re = createRemoteException(exceptionResponse);
           call.setException(re);
+          call.callStats.setResponseSizeBytes(totalSize);
+          call.callStats.setCallTimeMs(
+              EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
           if (isFatalConnectionException(exceptionResponse)) {
             return markClosed(re);
           }
@@ -1017,6 +1028,9 @@ public class RpcClientImpl extends AbstractRpcClient {
             cellBlockScanner = ipcUtil.createCellScanner(this.codec, this.compressor, cellBlock);
           }
           call.setResponse(value, cellBlockScanner);
+          call.callStats.setResponseSizeBytes(totalSize);
+          call.callStats.setCallTimeMs(
+              EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
         }
       } catch (IOException e) {
         if (expectedCall) call.setException(e);
@@ -1107,13 +1121,15 @@ public class RpcClientImpl extends AbstractRpcClient {
   }
 
   /**
-   * Construct an IPC cluster client whose values are of the {@link Message} class.
+   * Used in test only. Construct an IPC cluster client whose values are of the
+   * {@link Message} class.
    * @param conf configuration
    * @param clusterId the cluster id
    * @param factory socket factory
    */
+  @VisibleForTesting
   RpcClientImpl(Configuration conf, String clusterId, SocketFactory factory) {
-    this(conf, clusterId, factory, null);
+    this(conf, clusterId, factory, null, null);
   }
 
   /**
@@ -1122,10 +1138,11 @@ public class RpcClientImpl extends AbstractRpcClient {
    * @param clusterId the cluster id
    * @param factory socket factory
    * @param localAddr client socket bind address
+   * @param metrics the connection metrics
    */
   RpcClientImpl(Configuration conf, String clusterId, SocketFactory factory,
-      SocketAddress localAddr) {
-    super(conf, clusterId, localAddr);
+      SocketAddress localAddr, MetricsConnection metrics) {
+    super(conf, clusterId, localAddr, metrics);
 
     this.socketFactory = factory;
     this.connections = new PoolMap<ConnectionId, Connection>(getPoolType(conf), getPoolSize(conf));
@@ -1133,25 +1150,36 @@ public class RpcClientImpl extends AbstractRpcClient {
   }
 
   /**
-   * Construct an IPC client for the cluster <code>clusterId</code> with the default SocketFactory
-   * @param conf configuration
-   * @param clusterId the cluster id
+   * Used in test only. Construct an IPC client for the cluster {@code clusterId} with
+   * the default SocketFactory
    */
-  public RpcClientImpl(Configuration conf, String clusterId) {
-    this(conf, clusterId, NetUtils.getDefaultSocketFactory(conf), null);
+  @VisibleForTesting
+  RpcClientImpl(Configuration conf, String clusterId) {
+    this(conf, clusterId, NetUtils.getDefaultSocketFactory(conf), null, null);
   }
 
   /**
-   * Construct an IPC client for the cluster <code>clusterId</code> with the default SocketFactory
+   * Used in test only. Construct an IPC client for the cluster {@code clusterId} with
+   * the default SocketFactory
+   */
+  @VisibleForTesting
+  public RpcClientImpl(Configuration conf, String clusterId, SocketAddress localAddr) {
+    this(conf, clusterId, localAddr, null);
+  }
+
+  /**
+   * Construct an IPC client for the cluster {@code clusterId} with the default SocketFactory
    *
    * This method is called with reflection by the RpcClientFactory to create an instance
    *
    * @param conf configuration
    * @param clusterId the cluster id
    * @param localAddr client socket bind address.
+   * @param metrics the connection metrics
    */
-  public RpcClientImpl(Configuration conf, String clusterId, SocketAddress localAddr) {
-    this(conf, clusterId, NetUtils.getDefaultSocketFactory(conf), localAddr);
+  public RpcClientImpl(Configuration conf, String clusterId, SocketAddress localAddr,
+      MetricsConnection metrics) {
+    this(conf, clusterId, NetUtils.getDefaultSocketFactory(conf), localAddr, metrics);
   }
 
   /** Stop all threads related to this client.  No further calls may be made
@@ -1206,7 +1234,8 @@ public class RpcClientImpl extends AbstractRpcClient {
    */
   @Override
   protected Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc, MethodDescriptor md,
-      Message param, Message returnType, User ticket, InetSocketAddress addr)
+      Message param, Message returnType, User ticket, InetSocketAddress addr,
+      MetricsConnection.CallStats callStats)
       throws IOException, InterruptedException {
     if (pcrc == null) {
       pcrc = new PayloadCarryingRpcController();
@@ -1214,7 +1243,7 @@ public class RpcClientImpl extends AbstractRpcClient {
     CellScanner cells = pcrc.cellScanner();
 
     final Call call = new Call(this.callIdCnt.getAndIncrement(), md, param, cells, returnType,
-        pcrc.getCallTimeout());
+        pcrc.getCallTimeout(), MetricsConnection.newCallStats());
 
     final Connection connection = getConnection(ticket, call, addr);
 

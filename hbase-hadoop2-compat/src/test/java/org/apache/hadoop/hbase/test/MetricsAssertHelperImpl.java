@@ -198,6 +198,13 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   }
 
   @Override
+  public void assertCounterNotExist(String name, BaseSource source) {
+    getMetrics(source);
+    String cName = canonicalizeMetricName(name);
+    assertNull(name + " should be null", counters.get(cName));
+  }
+
+  @Override
   public long getCounter(String name, BaseSource source) {
     getMetrics(source);
     String cName = canonicalizeMetricName(name);

@@ -77,49 +77,42 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
 
   }
 
+  /**
+   * Dynamically register a histogram metrics when it does not exist. Does right by descriptions,
+   * but probably generates a bit of unnecessary garbage while the registry is populated the first
+   * time.
+   */
+  protected MutableHistogram getHistogram(String name, String description) {
+    if (getMetricsRegistry().get(name) == null) {
+      getMetricsRegistry().newHistogram(name, description);
+    }
+    return getMetricsRegistry().getHistogram(name);
+  }
+
+  @Override
   public void init() {
     this.metricsRegistry.clearMetrics();
   }
 
-  /**
-   * Set a single gauge to a value.
-   *
-   * @param gaugeName gauge name
-   * @param value     the new value of the gauge.
-   */
+  @Override
   public void setGauge(String gaugeName, long value) {
     MutableGaugeLong gaugeInt = metricsRegistry.getLongGauge(gaugeName, value);
     gaugeInt.set(value);
   }
 
-  /**
-   * Add some amount to a gauge.
-   *
-   * @param gaugeName The name of the gauge to increment.
-   * @param delta     The amount to increment the gauge by.
-   */
+  @Override
   public void incGauge(String gaugeName, long delta) {
     MutableGaugeLong gaugeInt = metricsRegistry.getLongGauge(gaugeName, 0l);
     gaugeInt.incr(delta);
   }
 
-  /**
-   * Decrease the value of a named gauge.
-   *
-   * @param gaugeName The name of the gauge.
-   * @param delta     the ammount to subtract from a gauge value.
-   */
+  @Override
   public void decGauge(String gaugeName, long delta) {
     MutableGaugeLong gaugeInt = metricsRegistry.getLongGauge(gaugeName, 0l);
     gaugeInt.decr(delta);
   }
 
-  /**
-   * Increment a named counter by some value.
-   *
-   * @param key   the name of the counter
-   * @param delta the ammount to increment
-   */
+  @Override
   public void incCounters(String key, long delta) {
     MutableCounterLong counter = metricsRegistry.getLongCounter(key, 0l);
     counter.incr(delta);
@@ -138,11 +131,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
     histo.add(value);
   }
 
-  /**
-   * Remove a named gauge.
-   *
-   * @param key
-   */
+  @Override
   public void removeMetric(String key) {
     metricsRegistry.removeMetric(key);
     JmxCacheBuster.clearJmxCache();
@@ -157,18 +146,22 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
     return metricsRegistry;
   }
 
+  @Override
   public String getMetricsContext() {
     return metricsContext;
   }
 
+  @Override
   public String getMetricsDescription() {
     return metricsDescription;
   }
 
+  @Override
   public String getMetricsJmxContext() {
     return metricsJmxContext;
   }
 
+  @Override
   public String getMetricsName() {
     return metricsName;
   }

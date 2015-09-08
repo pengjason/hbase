@@ -134,7 +134,7 @@ public class TestClientTimeouts {
   /**
    * Rpc Channel implementation with RandomTimeoutBlockingRpcChannel
    */
-  public static class RandomTimeoutRpcClient extends RpcClientImpl{
+  public static class RandomTimeoutRpcClient extends RpcClientImpl {
     public RandomTimeoutRpcClient(Configuration conf, String clusterId, SocketAddress localAddr) {
       super(conf, clusterId, localAddr);
     }

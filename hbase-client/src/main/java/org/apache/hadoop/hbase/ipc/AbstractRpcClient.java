@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.security.User;
@@ -55,6 +56,7 @@ public abstract class AbstractRpcClient implements RpcClient {
   protected final Configuration conf;
   protected String clusterId;
   protected final SocketAddress localAddr;
+  protected final MetricsConnection metrics;
 
   protected UserProvider userProvider;
   protected final IPCUtil ipcUtil;
@@ -79,8 +81,10 @@ public abstract class AbstractRpcClient implements RpcClient {
    * @param conf configuration
    * @param clusterId the cluster id
    * @param localAddr client socket bind address.
+   * @param metrics the connection metrics
    */
-  public AbstractRpcClient(Configuration conf, String clusterId, SocketAddress localAddr) {
+  public AbstractRpcClient(Configuration conf, String clusterId, SocketAddress localAddr,
+      MetricsConnection metrics) {
     this.userProvider = UserProvider.instantiate(conf);
     this.localAddr = localAddr;
     this.tcpKeepAlive = conf.getBoolean("hbase.ipc.client.tcpkeepalive", true);
@@ -100,6 +104,7 @@ public abstract class AbstractRpcClient implements RpcClient {
     this.connectTO = conf.getInt(SOCKET_TIMEOUT_CONNECT, DEFAULT_SOCKET_TIMEOUT_CONNECT);
     this.readTO = conf.getInt(SOCKET_TIMEOUT_READ, DEFAULT_SOCKET_TIMEOUT_READ);
     this.writeTO = conf.getInt(SOCKET_TIMEOUT_WRITE, DEFAULT_SOCKET_TIMEOUT_WRITE);
+    this.metrics = metrics;
 
     // login the server principal (if using secure Hadoop)
     if (LOG.isDebugEnabled()) {
@@ -199,25 +204,27 @@ public abstract class AbstractRpcClient implements RpcClient {
    * @return A pair with the Message response and the Cell data (if any).
    */
   Message callBlockingMethod(Descriptors.MethodDescriptor md, PayloadCarryingRpcController pcrc,
-      Message param, Message returnType, final User ticket, final InetSocketAddress isa)
+      Message param, Message returnType, final User ticket, final InetSocketAddress isa,
+      final ServerName serverName)
       throws ServiceException {
     if (pcrc == null) {
       pcrc = new PayloadCarryingRpcController();
     }
 
-    long startTime = 0;
-    if (LOG.isTraceEnabled()) {
-      startTime = EnvironmentEdgeManager.currentTime();
-    }
     Pair<Message, CellScanner> val;
     try {
-      val = call(pcrc, md, param, returnType, ticket, isa);
+      final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
+      cs.setStartTime(EnvironmentEdgeManager.currentTime());
+      val = call(pcrc, md, param, returnType, ticket, isa, cs);
       // Shove the results into controller so can be carried across the proxy/pb service void.
       pcrc.setCellScanner(val.getSecond());
 
+      cs.setCallTimeMs(EnvironmentEdgeManager.currentTime() - cs.getStartTime());
+      if (metrics != null) {
+        metrics.updateRpc(md, serverName, cs);
+      }
       if (LOG.isTraceEnabled()) {
-        long callTime = EnvironmentEdgeManager.currentTime() - startTime;
-        LOG.trace("Call: " + md.getName() + ", callTime: " + callTime + "ms");
+        LOG.trace("Call: " + md.getName() + ", callTime: " + cs.getCallTimeMs() + "ms");
       }
       return val.getFirst();
     } catch (Throwable e) {
@@ -242,7 +249,8 @@ public abstract class AbstractRpcClient implements RpcClient {
    */
   protected abstract Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc,
       Descriptors.MethodDescriptor md, Message param, Message returnType, User ticket,
-      InetSocketAddress isa) throws IOException, InterruptedException;
+      InetSocketAddress isa, MetricsConnection.CallStats callStats)
+      throws IOException, InterruptedException;
 
   @Override
   public BlockingRpcChannel createBlockingRpcChannel(final ServerName sn, final User ticket,
@@ -255,6 +263,7 @@ public abstract class AbstractRpcClient implements RpcClient {
    */
   @VisibleForTesting
   public static class BlockingRpcChannelImplementation implements BlockingRpcChannel {
+    private final ServerName sn;
     private final InetSocketAddress isa;
     private final AbstractRpcClient rpcClient;
     private final User ticket;
@@ -265,6 +274,7 @@ public abstract class AbstractRpcClient implements RpcClient {
      */
     protected BlockingRpcChannelImplementation(final AbstractRpcClient rpcClient,
         final ServerName sn, final User ticket, int channelOperationTimeout) {
+      this.sn = sn;
       this.isa = new InetSocketAddress(sn.getHostname(), sn.getPort());
       this.rpcClient = rpcClient;
       this.ticket = ticket;
@@ -285,7 +295,8 @@ public abstract class AbstractRpcClient implements RpcClient {
         pcrc.setCallTimeout(channelOperationTimeout);
       }
 
-      return this.rpcClient.callBlockingMethod(md, pcrc, param, returnType, this.ticket, this.isa);
+      return this.rpcClient.callBlockingMethod(md, pcrc, param, returnType, this.ticket, this.isa,
+          this.sn);
     }
   }
 }

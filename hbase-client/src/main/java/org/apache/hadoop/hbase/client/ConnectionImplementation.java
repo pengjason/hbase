@@ -121,6 +121,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   private final AsyncProcess asyncProcess;
   // single tracker per connection
   private final ServerStatisticTracker stats;
+  private final MetricsConnection metrics;
 
   private volatile boolean closed;
   private volatile boolean aborted;
@@ -157,11 +158,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   // Client rpc instance.
   private RpcClient rpcClient;
 
-  private MetaCache metaCache = new MetaCache();
+  private final MetaCache metaCache;
 
   private int refCount;
 
-  private User user;
+  protected User user;
 
   private RpcRetryingCallerFactory rpcCallerFactory;
 
@@ -188,7 +189,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     this.registry = setupRegistry();
     retrieveClusterId();
 
-    this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId);
+    this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics);
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
 
     // Do we publish the status?
@@ -239,11 +240,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     } else {
       nonceGenerator = new NoNonceGenerator();
     }
-    stats = ServerStatisticTracker.create(conf);
+    this.stats = ServerStatisticTracker.create(conf);
     this.asyncProcess = createAsyncProcess(this.conf);
     this.interceptor = (new RetryingCallerInterceptorFactory(conf)).build();
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
     this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
+    this.metrics = new MetricsConnection(new MetricsConnectionWrapperImpl(this));
+    this.metaCache = new MetaCache(this.metrics);
   }
 
   /**
@@ -363,6 +366,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public Admin getAdmin() throws IOException {
     return new HBaseAdmin(this);
+  }
+
+  @Override
+  public MetricsConnection getConnectionMetrics() {
+    return this.metrics;
   }
 
   private ExecutorService getBatchPool() {
@@ -1320,7 +1328,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     // InetSocketAddress, and this way we will rightfully get a new stubKey.
     // Also, include the hostname in the key so as to take care of those cases where the
     // DNS name is different but IP address remains the same.
-    InetAddress i =  new InetSocketAddress(rsHostname, port).getAddress();
+    InetAddress i = new InetSocketAddress(rsHostname, port).getAddress();
     String address = rsHostname;
     if (i != null) {
       address = i.getHostAddress() + "-" + rsHostname;
